@@ -11,7 +11,7 @@ An original browser game that looks like a lovingly designed imaginary 1985–19
 - Crisp original low-resolution pixel sprites, minimal decoration, no gradients, glows, damage overlays, heavy scanlines or modern visual effects.
 - Sky: planes crossing horizontally with original level-flight and banking sprites; very understated clouds and mountains.
 - Waterline: strong, slightly jagged separator near mid-screen.
-- Underwater: submarine on one of **eight** horizontal positions and **two** depth lanes; unobtrusive seabed stones and plants.
+- Underwater: submarine on one of **five** horizontal positions and **two** depth lanes; unobtrusive seabed stones and plants.
 - HUD: top-left `1-1`, top-right score and minimal game state, monochrome pixel/monospace type.
 
 ## Sprites / motion

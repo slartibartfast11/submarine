@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
 import {
   COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
-  canFire, speedScale, stageAt,
-  type GameMode, type StageNumber,
+  canFire, chooseBest, speedScale, stageAfter, stageGoal, stageTarget,
+  type BestRun, type GameMode, type StageNumber,
 } from './config';
 import { installSprites } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
+import { LcdHud } from './lcd';
+
+// Shared across runs within this browser page, but never persisted to storage.
+let sessionBest: BestRun = { score: 0, cycle: 1, stage: 1 };
 
 type EnemyKind = 'plane' | 'sweeper' | 'sub';
 type ShotKind = 'missile' | 'torpedo' | 'bomb' | 'charge' | 'enemyTorpedo';
@@ -81,10 +85,12 @@ export class MenuScene extends Phaser.Scene {
     addLabel(this, 268, 392, '1  CLASSIC  -  STEPPED LCD WORLD', 21);
     addLabel(this, 268, 426, '2  DYNAMIC  -  THE LCD COMES ALIVE', 21);
     addLabel(this, 268, 466, 'ARROWS/WASD: MOVE     SPACE: MISSILE     X: TORPEDO', 14);
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    const onKey = (event: KeyboardEvent): void => {
       if (event.code === 'Digit1' || event.code === 'Numpad1') this.scene.start('battle', { mode: 'classic' });
       if (event.code === 'Digit2' || event.code === 'Numpad2') this.scene.start('battle', { mode: 'dynamic' });
-    });
+    };
+    this.input.keyboard?.on('keydown', onKey);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.off('keydown', onKey));
   }
 }
 
@@ -93,7 +99,7 @@ export class BattleScene extends Phaser.Scene {
   private elapsed = 0;
   private cycle = 1;
   private stage: StageNumber = 1;
-  private columns = 4;
+  private columns = 2;
   private depth = 0;
   private facing: -1 | 1 = 1;
   private player!: Phaser.GameObjects.Image;
@@ -103,15 +109,16 @@ export class BattleScene extends Phaser.Scene {
   private torpedo: Shot | null = null;
   private playerLives = LIVES;
   private score = 0;
-  private invulnerableUntil = 0;
-  private gameOver = false;
+  private state: 'entering' | 'playing' | 'exploding' | 'gameOver' = 'entering';
+  private stageKills = 0;
+  private pendingStageAdvance = false;
   private nextPlane = 0;
   private nextSweeper = 0;
   private nextEnemySub = 0;
   private lastLaunchX = 0;
   private lastLaunchTime = -100000;
-  private hud!: Phaser.GameObjects.Text;
-  private weaponHud!: Phaser.GameObjects.Text;
+  private hud!: LcdHud;
+  private gameOverHint!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
 
   constructor() { super('battle'); }
@@ -121,7 +128,7 @@ export class BattleScene extends Phaser.Scene {
     this.elapsed = 0;
     this.cycle = 1;
     this.stage = 1;
-    this.columns = 4;
+    this.columns = 2;
     this.depth = 0;
     this.facing = 1;
     this.enemies = [];
@@ -130,8 +137,9 @@ export class BattleScene extends Phaser.Scene {
     this.torpedo = null;
     this.playerLives = LIVES;
     this.score = 0;
-    this.invulnerableUntil = 0;
-    this.gameOver = false;
+    this.state = 'entering';
+    this.stageKills = 0;
+    this.pendingStageAdvance = false;
     this.nextPlane = 850;
     this.nextSweeper = 1800;
     this.nextEnemySub = 3000;
@@ -141,36 +149,125 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
-    const top = this.add.graphics().setDepth(20);
-    top.fillStyle(COLOURS.background).fillRect(0, 0, SCREEN.width, 48);
-    top.lineStyle(2, COLOURS.dark).lineBetween(0, 48, SCREEN.width, 48);
-    this.hud = addLabel(this, 18, 11, '', 23).setDepth(21);
-    this.weaponHud = addLabel(this, 14, 514, '', 14);
-    this.player = this.add.image(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth], 'player').setDepth(5);
-    this.banner = addLabel(this, 240, 235, '', 25).setDepth(30);
+    this.hud = new LcdHud(this, this.mode);
+    this.player = this.add.image(PLAYER_COLUMNS[4], PLAYER_DEPTHS[0], 'player').setDepth(5);
+    this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
+    this.gameOverHint = addLabel(this, 290, 509, 'ESC  MENU / START AGAIN', 16).setDepth(30).setVisible(false);
+    this.drawHud();
     this.showStageBanner();
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    this.beginEntry();
+
+    const onKey = (event: KeyboardEvent): void => {
       const key = event.code;
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(key)) event.preventDefault();
       if (key === 'Escape') { this.scene.start('menu'); return; }
-      if (this.gameOver) {
-        if (key === 'KeyR' || key === 'Space') this.scene.restart({ mode: this.mode });
-        return;
+      // In particular: R, Space and X must NEVER restart a game-over run.
+      if (this.state !== 'playing') return;
+      if (key === 'ArrowLeft' || key === 'KeyA') {
+        this.columns = Math.max(0, this.columns - 1);
+        this.facing = -1;
       }
-      if (key === 'ArrowLeft' || key === 'KeyA') { this.columns = Math.max(0, this.columns - 1); this.facing = -1; }
-      if (key === 'ArrowRight' || key === 'KeyD') { this.columns = Math.min(7, this.columns + 1); this.facing = 1; }
+      if (key === 'ArrowRight' || key === 'KeyD') {
+        this.columns = Math.min(PLAYER_COLUMNS.length - 1, this.columns + 1);
+        this.facing = 1;
+      }
       if (key === 'ArrowUp' || key === 'KeyW') this.depth = 0;
       if (key === 'ArrowDown' || key === 'KeyS') this.depth = 1;
       if (key === 'Space' && !event.repeat) this.firePlayerMissile();
       if (key === 'KeyX' && !event.repeat) this.firePlayerTorpedo();
       this.player.setPosition(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth]);
       this.player.setFlipX(this.facing === -1);
+    };
+    this.input.keyboard?.on('keydown', onKey);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.off('keydown', onKey));
+  }
+
+  private drawHud(): void {
+    this.hud.render(this.cycle, this.stage, this.score, this.playerLives, sessionBest, this.state === 'gameOver');
+  }
+
+  private resetSpawns(): void {
+    this.elapsed = 0;
+    this.nextPlane = 850;
+    this.nextSweeper = 1800;
+    this.nextEnemySub = 3000;
+    this.lastLaunchTime = -100000;
+  }
+
+  private clearBattlefield(): void {
+    for (const shot of [...this.shots]) this.destroyShot(shot);
+    for (const enemy of [...this.enemies]) this.removeEnemy(enemy, false);
+    this.enemies = [];
+    this.shots = [];
+    this.missile = null;
+    this.torpedo = null;
+  }
+
+  private playEntryTone(): void {
+    // Original, deliberately plain sustained electronic tone. No game audio samples.
+    const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
+    const context = audio.context;
+    if (!context || context.state !== 'running') return;
+    const tone = context.createOscillator();
+    const volume = context.createGain();
+    const t = context.currentTime;
+    tone.type = 'square';
+    tone.frequency.value = 440;
+    volume.gain.setValueAtTime(0.016, t);
+    volume.gain.setValueAtTime(0.016, t + 0.57);
+    volume.gain.linearRampToValueAtTime(0.0001, t + 0.68);
+    tone.connect(volume);
+    volume.connect(context.destination);
+    tone.start(t);
+    tone.stop(t + 0.7);
+  }
+
+  private beginEntry(): void {
+    // Every new submarine enters on lane 1: 5 -> 4 -> 3, then controls unlock.
+    this.state = 'entering';
+    this.stageKills = 0;
+    this.pendingStageAdvance = false;
+    this.resetSpawns();
+    this.columns = 4;
+    this.depth = 0;
+    this.facing = -1;
+    this.player.setVisible(true).setAlpha(1).setFlipX(true);
+    this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[0]);
+    this.gameOverHint.setVisible(false);
+    this.drawHud();
+    this.playEntryTone();
+    this.time.delayedCall(250, () => {
+      if (this.state !== 'entering') return;
+      this.columns = 3;
+      this.player.x = PLAYER_COLUMNS[3];
     });
+    this.time.delayedCall(500, () => {
+      if (this.state !== 'entering') return;
+      this.columns = 2;
+      this.player.x = PLAYER_COLUMNS[2];
+    });
+    this.time.delayedCall(750, () => {
+      if (this.state !== 'entering') return;
+      this.state = 'playing';
+    });
+  }
+
+  private advanceStage(): void {
+    this.pendingStageAdvance = false;
+    this.clearBattlefield();
+    const next = stageAfter(this.cycle, this.stage);
+    this.cycle = next.cycle;
+    this.stage = next.stage;
+    this.stageKills = 0;
+    this.resetSpawns();
+    this.drawHud();
+    this.showStageBanner();
   }
 
   private showStageBanner(): void {
     const headings = ['AIR ATTACK', 'SURFACE SWEEPERS', 'ENEMY SUBMARINES'];
-    this.banner.setText(`${this.cycle}-${this.stage}   ${headings[this.stage - 1]}`);
+    this.banner.setText(`${this.cycle}-${this.stage}   ${headings[this.stage - 1]}    0/${stageGoal(this.cycle, this.stage)}`);
+    this.tweens.killTweensOf(this.banner);
     this.banner.setAlpha(1);
     this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 250 });
   }
@@ -259,8 +356,14 @@ export class BattleScene extends Phaser.Scene {
     if (destroyed) {
       this.score += enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200;
       this.explode(enemy.x, enemy.y);
+      sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
+      if (enemy.kind === stageTarget(this.stage)) {
+        this.stageKills++;
+        if (this.stageKills >= stageGoal(this.cycle, this.stage)) this.pendingStageAdvance = true;
+      }
+      this.drawHud();
     }
-    // Already fired projectiles continue in flight, even if their source is gone.
+    // Shots already fired by destroyed enemies continue their journeys.
   }
 
   private explode(x: number, y: number): void {
@@ -269,14 +372,28 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private hitPlayer(): void {
-    if (this.gameOver || this.elapsed * 1000 < this.invulnerableUntil) return;
+    if (this.state !== 'playing') return;
+    this.state = 'exploding';
     this.playerLives--;
     this.explode(this.player.x, this.player.y);
-    this.invulnerableUntil = this.elapsed * 1000 + 1500;
-    if (this.playerLives <= 0) {
-      this.gameOver = true;
-      this.banner.setText('GAME OVER    PRESS R TO RESTART');
-      this.banner.setPosition(205, 235).setAlpha(1);
+    this.player.setVisible(false);
+    this.drawHud();
+
+    if (this.playerLives === 0) {
+      // Freeze all enemies/projectiles at their final displayed positions.
+      this.time.delayedCall(430, () => {
+        if (this.state !== 'exploding') return;
+        this.state = 'gameOver';
+        this.gameOverHint.setVisible(true);
+        this.drawHud(); // Illuminates the previously ghosted GAME OVER segments.
+      });
+    } else {
+      this.time.delayedCall(650, () => {
+        if (this.state !== 'exploding') return;
+        this.clearBattlefield();
+        this.showStageBanner();
+        this.beginEntry(); // Same frame, fresh quota. Score/lives are retained.
+      });
     }
   }
 
@@ -384,6 +501,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     for (const shot of [...this.shots]) {
+      if (this.state !== 'playing' || this.pendingStageAdvance) break;
       if (shot.kind === 'missile' || shot.kind === 'torpedo') {
         const targetKinds: EnemyKind[] = shot.kind === 'missile' ? ['plane', 'sweeper'] : ['sub'];
         const target = this.enemies.find((enemy) => targetKinds.includes(enemy.kind) && this.intersects(shot, enemy));
@@ -408,26 +526,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.gameOver) return;
-    // Bound simulation delta when switching browser tabs to avoid sudden tunnelling.
+    if (this.state !== 'playing') return;
+    // Limit simulation delta after tab switches. Stage advancement requires kills.
     const dt = Math.min(delta, 35) / 1000;
     this.elapsed += dt;
-    const nextStage = stageAt(this.elapsed);
-    if (nextStage.cycle !== this.cycle || nextStage.stage !== this.stage) {
-      this.cycle = nextStage.cycle;
-      this.stage = nextStage.stage;
-      // A new cycle returns to air-only defence. Don't carry submarines,
-      // sweepers or their already-fired weapons into the new 1-1 stage.
-      if (this.stage === 1) {
-        for (const enemy of [...this.enemies]) {
-          if (enemy.kind !== 'plane') this.removeEnemy(enemy, false);
-        }
-        for (const shot of [...this.shots]) {
-          if (shot.kind === 'charge' || shot.kind === 'enemyTorpedo') this.destroyShot(shot);
-        }
-      }
-      this.showStageBanner();
-    }
     const now = this.elapsed * 1000;
     const scale = speedScale(this.cycle);
     if (now >= this.nextPlane) {
@@ -444,10 +546,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.updateEnemies(dt);
     this.updateShots(dt);
-    this.player.setAlpha(now < this.invulnerableUntil && Math.floor(now / 120) % 2 ? 0.3 : 1);
-    this.hud.setText(`${this.cycle}-${this.stage}     SCORE ${String(this.score).padStart(6, '0')}     HULL ${this.playerLives}     ${this.mode.toUpperCase()}`);
-    this.weaponHud.setText(
-      `MISSILE ${this.missile ? 'IN FLIGHT' : 'READY'}    TORPEDO ${this.stage < 3 ? 'LOCKED UNTIL 1-3' : this.torpedo ? 'IN FLIGHT' : 'READY'}    ESC MENU`,
-    );
+    if (this.state === 'playing' && this.pendingStageAdvance) this.advanceStage();
   }
+
 }

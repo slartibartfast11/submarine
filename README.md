@@ -11,11 +11,10 @@ No installation or account required. Use a keyboard to play.
 | Key | Action |
 | --- | --- |
 | `1` or `2` | Choose **Classic** or **Dynamic** at the title screen |
-| Arrow keys or `W` `A` `S` `D` | Move between eight horizontal columns and two depths |
+| Arrow keys or `W` `A` `S` `D` | Move between five horizontal positions and two depths |
 | `Space` | Launch a missile straight upward |
 | `X` | Fire a torpedo left or right (unlocks at stage 1-3) |
-| `Esc` | Return to the menu |
-| `R` | Restart after game over |
+| `Esc` | Return to the menu (including after game over) |
 
 Your submarine can have **one missile and one torpedo in flight at once**, but cannot fire another of the same type until the previous shot resolves. Missiles can also intercept falling bombs and depth charges.
 
@@ -25,9 +24,11 @@ Your submarine can have **one missile and one torpedo in flight at once**, but c
 
 **Dynamic** — The same monochrome world, brought to life with fluid movement, variable speeds and enemies that respond imperfectly to your position.
 
-The stages cycle from overhead aircraft (**1-1**), to aircraft and surface sweepers (**1-2**), then enemy submarines and torpedoes (**1-3**). Each new cycle increases the pace. See how long you can last.
+The stages cycle from overhead aircraft (**1-1**), to aircraft and surface sweepers (**1-2**), then enemy submarines and torpedoes (**1-3**). **Destroy the stage's target enemies to advance**; simply surviving never advances the stage. Each new cycle increases the pace.
 
-This is an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+You have three submarines, displayed as LCD Xs. When one is lost, the replacement enters from the right and restarts the same stage. On the final loss, the battlefield freezes and the etched GAME OVER lettering lights up; use **Esc** to return to the menu. The LCD banner also shows a high score for this open page (not stored permanently).
+
+This is version 0.2, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

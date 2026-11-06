@@ -1,56 +1,42 @@
-# Gameplay rules — provisional source of truth
+# Gameplay — v0.2
 
-## Design pillars
+## Fundamental rules
 
-1. Short arcade rounds, quick recognition, constant timing decisions.
-2. One active projectile per **weapon**, not rapid fire.
-3. Early levels allow stationary defensive play; increasing speed, density and accuracy eventually reward thoughtful dodging. Never punish standing still by fiat.
-4. Classic is pattern-based with limited randomness; Dynamic is an imperfectly reactive version of the exact same game.
-5. Readability and fair escape routes take priority over simulated military realism.
+- Five discrete horizontal positions, numbered 1–5 from left to right, and two depth lanes.
+- One active missile and one active torpedo independently. Both may be in flight together; missed shots must expire before re-firing that weapon.
+- One live projectile per enemy combatant. Previously fired shots can remain after the attacker is destroyed.
+- Missile goes straight upward, torpedo moves horizontally in the last left/right movement direction.
+- Missiles intercept falling bombs or charges. Logical sprite rectangles, including swept collision between frames, determine contact rather than opaque-pixel collisions.
+- Classic uses stepped graphics and predictable enemy paths with some random bombing. Dynamic uses the same artwork but flexible speeds, vertical changes and imperfect awareness.
 
-## Player
+## Stages — kill objectives, not a clock
 
-- Eight horizontal columns (a *deliberate expansion* beyond the source game), two depth lanes.
-- Left/right shift one column, up/down select depth lane. In the first prototype, the last horizontal direction also selects the firing direction for torpedoes (to be playtested).
-- `Space`: missile vertically upward at the current X.
-- `X`: torpedo horizontally left or right from the current lane. Available from 1-3.
-- Player may simultaneously have one missile **and** one torpedo in flight. The missile doesn't lock the torpedo or vice versa.
-- A missile/torpedo slot becomes free after its projectile collides, exits the field, or otherwise expires.
+| Stage | Enemies present | Target required to advance | Initial target |
+| --- | --- | --- | --- |
+| 1-1 | Aircraft | Aircraft | 8 |
+| 1-2 | Aircraft + surface sweepers | Sweepers | 4 |
+| 1-3 | Above + submarines at screen edges | Enemy subs | 4 |
+| 2-1 onward | Repeat these three stages faster | Stage-specific target | Increases each cycle |
 
-## Stages
+Off-target kills still earn points, but do **not** advance the current objective. The clock is never used to advance stages. Reaching a quota clears enemies/projectiles and begins the next stage; losing a submarine returns to the beginning of the **same** stage, with the quota reset but total score preserved.
 
-| Stage | Threats | Player weapon |
-| --- | --- | --- |
-| 1-1 | Overhead aircraft dropping mostly random bombs | Missile |
-| 1-2 | Aircraft plus surface sweepers dropping charges | Missile |
-| 1-3 | Above plus enemy submarines at left and right edges | Missile and torpedo |
-| 2-1 onward | Repeat 1–3 with faster/more demanding attacks | Same |
+The stage quotas, scoring values, speeds and hitboxes are prototype tuning values, not documented original-hardware rules.
 
-Enemy submarines travel **up and down at the edges**, never horizontally approach the player. Their danger is firing while the player is occupied elsewhere.
+## Lives, entry and game over
 
-## Weapon lockout / collision
+- Three submarines total. Show three large fixed LCD X segments, active or faintly ghosted.
+- At game start and after each non-final death, the fresh submarine enters at upper depth: column **5 → 4 → 3** in three stepped poses with an original long electronic ready beep. Gameplay starts in column 3. Player cannot shoot or be hit during entry.
+- A hit explodes and removes the submarine, freezes combat, consumes one X and resets the current stage once the entry sequence starts. The score and remaining Xs persist.
+- The third hit explodes; **all actors freeze in place**; the permanently etched, normally ghosted **GAME OVER** lettering in the top LCD strip lights up. No respawn and no automatic scene change.
+- Only **Esc** returns to the title menu. Fire, R, and other gameplay keys never restart.
 
-- Every enemy combatant has one active projectile slot. An enemy cannot fire again until its projectile hits/exits/expires.
-- Fired projectiles continue even if the shooter is destroyed.
-- Player missiles intercept bombs and depth charges when their sprite boxes overlap; both projectiles resolve with a small explosion.
-- Projectiles must actually intersect targets. A missile must not explode early, and a bomb must originate at a visible enemy.
-- Classic projectiles follow fixed directions; modern projectiles may have limited drift, but **player missiles remain straight up and player torpedoes horizontal**.
-- **Gridular collision:** use whole rectangular sprite hitboxes, not opaque-pixel masks or pixel-perfect art collisions. In Classic mode, a missile and bomb that occupy overlapping character boxes are a hit, even if drawn pixels would narrowly miss.
-- Check swept box paths between ticks so fast opposing projectiles cannot pass through one another without registering a hit. Render quantisation does not change collision results.
+## LCD and scoring
 
-## Mode details
+- Numeric stage/frame, score and session high-score stage/score use custom seven-segment-style LCD numerals.
+- Fixed labels and three Xs are drawn as permanent LCD elements. GAME OVER is a static graphic in the HUD, faint when inactive and dark when enabled.
+- Score for aircraft +100, sweeper +150, submarine +200 (tunable).
+- **HI SCORE** remembers the highest score and the stage on which that score was first reached. It lasts across new games in the same open page, but is not stored locally or remotely; refreshing the page resets it.
 
-**Classic:** Enemies follow fixed lines/lanes, with stepped rendering and limited random bomb timings. No tracking or homing shots. Difficulty mostly speed/density. Standing still can work at the start.
+## Originality
 
-**Dynamic:** Same world and same constrained player. Planes can accelerate/decelerate and vary altitude, surface boats vary speed, submarines transition fluidly between depths but remain on side edges. Bomb accuracy is probabilistic and can respond to the *last revealed firing column*, which decays; enemies do not continuously know your location. No perfectly targeted volleys or unavoidable projectile walls.
-
-## Prototyping choices (not verified from original hardware)
-
-- Three hull lives.
-- Each stage lasts 35 seconds before cycling.
-- Hit scores: plane +100, sweeper +150, submarine +200.
-- Torpedo launches in the last horizontal movement direction.
-- Enemy firing rates/speeds, hitboxes and invulnerability are placeholder tuning values.
-- Sprite-box collisions and swept movement checks prevent missed hits between simulation ticks. Fine-tune hitbox dimensions and collision priority through playtesting.
-
-These details should change after playtesting rather than be mistaken for authoritative Casio behaviour.
+This is a non-commercial original homage to a style of LCD games, not a pixel-accurate reproduction. All generated artwork and sound are original. No source assets or original startup melody.
