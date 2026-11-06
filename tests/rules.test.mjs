@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import {
   CLASSIC_COLUMNS, CLASSIC_ROWS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
-  classicHalfHitsCell, classicShotsMeet, classicSubAction,
+  classicHalfHitsCell, classicShotsMeet, classicMissileBombContact, classicSubAction,
   classicTorpedoDirection, classicPlaneCanRelease,
   classicBombFlight, classicBombLateralStep, classicAdjacentBombThreat,
 } from '../src/classic-grid.ts';
@@ -89,7 +89,9 @@ test('each whole aircraft cell is hit by either fore or aft projectile half', ()
     }
   }
   assert.equal(classicShotsMeet(5, 4, 5, 4), true);
-  assert.equal(classicShotsMeet(5, 4, 4, 4), false);
+  assert.equal(classicShotsMeet(5, 4, 4, 4), true);
+  assert.equal(classicShotsMeet(5, 4, 6, 4), true);
+  assert.equal(classicShotsMeet(5, 4, 7, 4), false);
 });
 test('half-cell coordinates are ordered and stay inside the field', () => {
   for (let col = 0; col < 6; col++) {
@@ -151,4 +153,25 @@ test('Emergency assist cannot clear harmless, distant or vertical bombs', () => 
   assert.equal(classicAdjacentBombThreat(2, 7, 'diagonal', 1, 1, 2, 4), false);
   assert.equal(classicAdjacentBombThreat(4, 7, 'diagonal', 1, 1, 2, 4), false);
   assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, 1, 2, 5), false);
+});
+
+test('Classic upward missiles intercept bombs one half-column to either side', () => {
+  // Missile launched on grid 7; bombs on 6/7/8 all intercept.
+  for (const bombColumn of [6, 7, 8]) {
+    assert.equal(classicShotsMeet(7, 8, bombColumn, 8), true);
+    assert.equal(classicMissileBombContact(7, 9, 8, bombColumn, 7, 8), true);
+    // Opposing shots cross between successive LCD states: 8 -> 7, 7 -> 8.
+    assert.equal(classicMissileBombContact(7, 8, 7, bombColumn, 7, 8), true);
+  }
+  assert.equal(classicMissileBombContact(7, 9, 8, 5, 7, 8), false);
+  assert.equal(classicMissileBombContact(7, 9, 8, 9, 7, 8), false);
+});
+test('No interception when vertical trajectories have not met', () => {
+  assert.equal(classicMissileBombContact(7, 9, 8, 8, 3, 4), false);
+  assert.equal(classicMissileBombContact(7, 5, 4, 8, 9, 10), false);
+  assert.equal(classicShotsMeet(7, 8, 8, 9), false);
+});
+test('Player has a distinct lower starting depth', () => {
+  assert.equal(PLAYER_DEPTHS.length, 2);
+  assert.ok(PLAYER_DEPTHS[1] > PLAYER_DEPTHS[0]);
 });

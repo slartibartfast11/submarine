@@ -36,11 +36,31 @@ export function classicHalfHitsCell(
   return Math.floor(halfColumn / 2) === column && Math.floor(halfRow / 2) === row;
 }
 
-/** Two small shots collide only when occupying the same half-cell. */
+/**
+ * Missile and bomb segments have finite LCD width. A missile at half-column
+ * 7 hits a bomb at 6, 7 or 8 when they overlap vertically. The missile does
+ * not move sideways, and the range never extends past the adjacent slot.
+ */
 export function classicShotsMeet(
-  firstCol: number, firstRow: number, secondCol: number, secondRow: number,
+  missileCol: number, missileRow: number, bombCol: number, bombRow: number,
 ): boolean {
-  return firstCol === secondCol && firstRow === secondRow;
+  return Math.abs(missileCol - bombCol) <= 1 && missileRow === bombRow;
+}
+
+/**
+ * Check shared-clock movement for two shots travelling in opposite vertical
+ * directions. They may occupy the same half-row on this tick OR swap rows
+ * between two snapshots (otherwise the alternate half-row parity can cause
+ * unavoidable misses). Horizontal forgiveness is exactly one half-column.
+ */
+export function classicMissileBombContact(
+  missileColumn: number, missileBeforeRow: number, missileAfterRow: number,
+  bombColumn: number, bombBeforeRow: number, bombAfterRow: number,
+): boolean {
+  if (Math.abs(missileColumn - bombColumn) > 1) return false;
+  const wereSeparatedWithMissileBelow = missileBeforeRow >= bombBeforeRow;
+  const nowMissileAboveOrLevel = missileAfterRow <= bombAfterRow;
+  return wereSeparatedWithMissileBelow && nowMissileAboveOrLevel;
 }
 
 /** Classic chooses the visible enemy sub's side, never the player's facing. */

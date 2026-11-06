@@ -12,7 +12,7 @@ import { LcdHud } from './lcd';
 import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
-  classicHalfRowY, classicHalfHitsCell, classicShotsMeet,
+  classicHalfRowY, classicHalfHitsCell, classicMissileBombContact,
   classicSubAction, classicTorpedoDirection,
   classicBombFlight, classicBombLateralStep, classicPlaneCanRelease,
   classicAdjacentBombThreat, type ClassicBombFlight,
@@ -126,7 +126,7 @@ export class BattleScene extends Phaser.Scene {
   private cycle = 1;
   private stage: StageNumber = 1;
   private columns = 2;
-  private depth = 0;
+  private depth = 1;
   private facing: -1 | 1 = 1;
   private player!: Phaser.GameObjects.Image;
   private enemies: Enemy[] = [];
@@ -156,7 +156,7 @@ export class BattleScene extends Phaser.Scene {
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
-    this.depth = 0;
+    this.depth = 1;
     this.facing = 1;
     this.enemies = [];
     this.shots = [];
@@ -177,7 +177,7 @@ export class BattleScene extends Phaser.Scene {
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
     this.hud = new LcdHud(this, this.mode);
-    this.player = this.add.image(PLAYER_COLUMNS[4], PLAYER_DEPTHS[0], 'player').setDepth(5);
+    this.player = this.add.image(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
     this.gameOverHint = addLabel(this, 290, 509, 'ESC  MENU / START AGAIN', 16).setDepth(30).setVisible(false);
     this.drawHud();
@@ -252,16 +252,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private beginEntry(): void {
-    // Every new submarine enters on lane 1: 5 -> 4 -> 3, then controls unlock.
+    // Every new submarine enters on the lower lane: 5 -> 4 -> 3, then controls unlock.
     this.state = 'entering';
     this.stageKills = 0;
     this.pendingStageAdvance = false;
     this.resetSpawns();
     this.columns = 4;
-    this.depth = 0;
+    this.depth = 1;
     this.facing = -1;
     this.player.setVisible(true).setAlpha(1).setFlipX(true);
-    this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[0]);
+    this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1]);
     this.gameOverHint.setVisible(false);
     this.drawHud();
     this.playEntryTone();
@@ -642,7 +642,8 @@ export class BattleScene extends Phaser.Scene {
       shot.image.setPosition(shot.x, shot.y);
     }
 
-    // A missile destroys a falling bomb/charge in the same occupied half-cell.
+    // A missile intercepts a falling bomb/charge in its half-column or either
+    // neighbouring slot. Include a vertical row-crossing in the same clock tick.
     for (const shot of [...this.shots]) {
       if (shot.kind !== 'missile') continue;
       const assisted = this.mode === 'classic' && shot.emergencyIntercept !== null &&
@@ -650,7 +651,10 @@ export class BattleScene extends Phaser.Scene {
       const other = assisted ?? this.shots.find((candidate) =>
         (candidate.kind === 'bomb' || candidate.kind === 'charge') &&
         (this.mode === 'classic'
-          ? classicShotsMeet(shot.halfColumn, shot.halfRow, candidate.halfColumn, candidate.halfRow)
+          ? classicMissileBombContact(
+            shot.halfColumn, shot.halfRow - shot.stepRow, shot.halfRow,
+            candidate.halfColumn, candidate.halfRow - candidate.stepRow, candidate.halfRow,
+          )
           : sweptBoxesOverlap(
             this.shotBox(shot, true), this.shotBox(shot),
             this.shotBox(candidate, true), this.shotBox(candidate),
