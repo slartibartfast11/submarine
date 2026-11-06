@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
+  CLASSIC_TORPEDO_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
   CLASSIC_ROW_Y, ENTRY_STEP_MS, COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
+  torpedoUnlocked,
   stageAfter, stageGoal, stageTarget,
   type BestRun, type GameMode, type StageNumber, type StagePosition,
 } from './config';
@@ -13,9 +15,10 @@ import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
   classicHalfRowY, classicHalfHitsCell, classicMissileBombContact,
-  classicSubAction, classicTorpedoDirection,
+  classicSubAction, classicTorpedoDirection, classicTorpedoY,
+  classicTorpedoesContact, chooseSubPattern, dynamicSubAction, dynamicSubDepthProgress,
   classicBombFlight, classicBombLateralStep, classicPlaneCanRelease,
-  classicAdjacentBombThreat, type ClassicBombFlight,
+  classicAdjacentBombThreat, type ClassicBombFlight, type SubPattern,
 } from './classic-grid';
 
 // Shared across runs within this browser page, but never persisted to storage.
@@ -44,6 +47,9 @@ type Enemy = {
   shotsFired: number;
   reconnaissance: boolean;
   activeBombs: number;
+  subPattern: SubPattern;
+  spawnedAt: number;
+  initialGridRow: number;
 };
 
 type Shot = {
@@ -64,6 +70,8 @@ type Shot = {
   driftDirection: -1 | 1;
   ticksInFlight: number;
   emergencyIntercept: Shot | null;
+  prevHalfColumn: number;
+  prevHalfRow: number;
 };
 
 function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
@@ -365,7 +373,7 @@ export class BattleScene extends Phaser.Scene {
       kind === 'sweeper' ? CLASSIC_SURFACE_ROW : CLASSIC_SUB_ROWS[Math.random() < 0.5 ? 0 : 1];
     const y = this.mode === 'classic' ? CLASSIC_ROW_Y[gridRow] :
       kind === 'plane' ? Phaser.Utils.Array.GetRandom([105, 146, 186]) :
-        kind === 'sweeper' ? SCREEN.waterline - 13 : PLAYER_DEPTHS[Math.random() < 0.5 ? 0 : 1];
+        kind === 'sweeper' ? SCREEN.waterline - 13 : CLASSIC_ROW_Y[gridRow];
     const x = this.mode === 'classic' ? PLAYER_COLUMNS[gridColumn] :
       isSub ? (direction === 1 ? 29 : SCREEN.width - 29) :
         (direction === 1 ? -65 : SCREEN.width + 65);
@@ -380,6 +388,9 @@ export class BattleScene extends Phaser.Scene {
       // Some Classic flights are reconnaissance and never release bombs.
       reconnaissance: kind === 'plane' && this.mode === 'classic' && Math.random() < 0.30,
       activeBombs: 0,
+      subPattern: chooseSubPattern(Math.random()),
+      spawnedAt: this.elapsed * 1000,
+      initialGridRow: gridRow,
     };
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
@@ -393,6 +404,7 @@ export class BattleScene extends Phaser.Scene {
       halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
       bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,
       emergencyIntercept: null,
+      prevHalfColumn: -1, prevHalfRow: -1,
     };
     shot.image.setFlipX(vx < 0);
     this.shots.push(shot);
@@ -400,7 +412,8 @@ export class BattleScene extends Phaser.Scene {
       // Unlike enemy torpedoes, Classic aircraft bombs may overlap in flight.
       if (this.mode === 'classic' && owner.kind === 'plane' && kind === 'bomb') {
         owner.activeBombs++;
-      } else {
+      } else if (owner.kind !== 'sub') {
+        // A submarine's planned second attack is independent of its first torpedo.
         owner.shot = shot;
       }
     }
@@ -415,8 +428,14 @@ export class BattleScene extends Phaser.Scene {
       classicHalfRowY(halfRow), 0, 0, owner);
     shot.halfColumn = halfColumn;
     shot.halfRow = halfRow;
+    shot.prevHalfColumn = halfColumn;
+    shot.prevHalfRow = halfRow;
     shot.stepColumn = stepColumn;
     shot.stepRow = stepRow;
+    if (kind === 'torpedo' || kind === 'enemyTorpedo') {
+      shot.y = classicTorpedoY(halfRow);
+      shot.image.setPosition(shot.x, shot.y);
+    }
     shot.image.setFlipX(stepColumn < 0);
     return shot;
   }
@@ -446,18 +465,22 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private firePlayerTorpedo(): void {
-    if (this.stage < 3 || !canFire('torpedo', this.missile !== null, this.torpedo !== null)) return;
+    if (!torpedoUnlocked(this.cycle, this.stage) ||
+        !canFire('torpedo', this.missile !== null, this.torpedo !== null)) return;
     if (this.mode === 'classic') {
       const target = this.enemies.find((enemy) => enemy.kind === 'sub');
-      const direction = classicTorpedoDirection(this.columns, target?.gridColumn ?? null);
-      if (direction === null) return; // Don't waste a torpedo when no sub is visible.
+      const direction = classicTorpedoDirection(
+        this.columns, target?.gridColumn ?? null, this.facing,
+      );
       this.torpedo = this.addClassicShot(
         'torpedo', this.columns * 2 + (direction === 1 ? 1 : 0),
         (4 + this.depth) * 2 + 1, direction, 0, null,
       );
     } else {
-      this.torpedo = this.addShot('torpedo', PLAYER_COLUMNS[this.columns],
-        PLAYER_DEPTHS[this.depth], this.facing * 285, 0, null);
+      this.torpedo = this.addShot(
+        'torpedo', PLAYER_COLUMNS[this.columns] + this.facing * 43,
+        PLAYER_DEPTHS[this.depth], this.facing * DYNAMIC_TORPEDO_SPEED, 0, null,
+      );
     }
     this.lastLaunchX = PLAYER_COLUMNS[this.columns];
     this.lastLaunchTime = this.elapsed * 1000;
@@ -466,7 +489,7 @@ export class BattleScene extends Phaser.Scene {
   private fireEnemy(enemy: Enemy): void {
     if (this.mode === 'classic' && enemy.kind === 'plane') {
       if (!classicPlaneCanRelease(enemy.reconnaissance, enemy.activeBombs)) return;
-    } else if (enemy.shot) return;
+    } else if (enemy.shot && enemy.kind !== 'sub') return;
 
     const kind: ShotKind = enemy.kind === 'sub' ? 'enemyTorpedo' :
       enemy.kind === 'plane' ? 'bomb' : 'charge';
@@ -485,11 +508,14 @@ export class BattleScene extends Phaser.Scene {
     } else {
       let vx = 0;
       let vy = 0;
-      const x = enemy.x;
+      let x = enemy.x;
       let y = enemy.y;
       const cycleScale = speedScale(this.cycle);
       if (enemy.kind === 'sub') {
-        vx = (enemy.x < SCREEN.width / 2 ? 1 : -1) * 184 * cycleScale;
+        const direction = enemy.x < SCREEN.width / 2 ? 1 : -1;
+        x += direction * 36;
+        vx = direction * DYNAMIC_TORPEDO_SPEED * 0.92 * cycleScale;
+        enemy.shotsFired++;
       } else {
         y += enemy.kind === 'plane' ? 13 : 16;
         vy = 109 * cycleScale;
@@ -516,8 +542,8 @@ export class BattleScene extends Phaser.Scene {
   private removeEnemy(enemy: Enemy, destroyed: boolean): void {
     this.enemies = this.enemies.filter((e) => e !== enemy);
     enemy.image.destroy();
-    if (enemy.kind === 'sub' && this.mode === 'classic') {
-      this.nextEnemySub = this.elapsed * 1000 + 2000 + Math.random() * 2000;
+    if (enemy.kind === 'sub') {
+      this.nextEnemySub = this.elapsed * 1000 + 1400 + Math.random() * 1800;
     }
     if (destroyed) {
       this.score += enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200;
@@ -567,8 +593,8 @@ export class BattleScene extends Phaser.Scene {
 
   private shotBox(shot: Shot, previous = false): Box {
     // These are the full original sprite rectangles, not their drawn pixel masks.
-    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 24 : 12;
-    const height = shot.kind === 'missile' ? 16 : shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 6 : 12;
+    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 50 : 12;
+    const height = shot.kind === 'missile' ? 16 : shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 10 : 12;
     return { x: previous ? shot.prevX : shot.x, y: previous ? shot.prevY : shot.y, width, height };
   }
 
@@ -622,7 +648,9 @@ export class BattleScene extends Phaser.Scene {
         } else {
           // A single intermittent enemy sub: appear, fire, optionally change
           // depth and fire again, then disappear. Shots persist when it vanishes.
-          const action = classicSubAction(enemy.ticksAlive, enemy.shotsFired, enemy.shot !== null);
+          const action = classicSubAction(
+            enemy.ticksAlive, enemy.shotsFired, enemy.shot !== null, enemy.subPattern,
+          );
           if (action === 'disappear') {
             this.removeEnemy(enemy, false);
             continue;
@@ -650,8 +678,22 @@ export class BattleScene extends Phaser.Scene {
             continue;
           }
         } else {
-          enemy.y = (PLAYER_DEPTHS[0] + PLAYER_DEPTHS[1]) / 2 +
-            Math.sin(now * 0.0010 * scale + enemy.phase) * (PLAYER_DEPTHS[1] - PLAYER_DEPTHS[0]) / 2;
+          const age = now - enemy.spawnedAt;
+          const action = dynamicSubAction(age, enemy.shotsFired, enemy.subPattern);
+          if (action === 'disappear') {
+            this.removeEnemy(enemy, false);
+            continue;
+          }
+          const progress = dynamicSubDepthProgress(age, enemy.subPattern);
+          const from = CLASSIC_ROW_Y[enemy.initialGridRow];
+          const toRow = enemy.initialGridRow === CLASSIC_SUB_ROWS[0] ?
+            CLASSIC_SUB_ROWS[1] : CLASSIC_SUB_ROWS[0];
+          const eased = progress * progress * (3 - 2 * progress);
+          enemy.y = from + (CLASSIC_ROW_Y[toRow] - from) * eased;
+          if (progress >= 1) enemy.gridRow = toRow;
+          enemy.image.setPosition(enemy.x, enemy.y).setFlipX(enemy.direction === -1);
+          if (action === 'fire') this.fireEnemy(enemy);
+          continue;
         }
         enemy.image.setPosition(enemy.x, enemy.y).setFlipX(enemy.direction === -1);
       }
@@ -676,8 +718,13 @@ export class BattleScene extends Phaser.Scene {
       shot.prevY = shot.y;
       if (this.mode === 'classic') {
         shot.ticksInFlight++;
+        shot.prevHalfColumn = shot.halfColumn;
+        shot.prevHalfRow = shot.halfRow;
         shot.halfRow += shot.stepRow;
-        shot.halfColumn += shot.stepColumn;
+        const isTorpedo = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo';
+        if (!isTorpedo || shot.ticksInFlight % CLASSIC_TORPEDO_MOVE_TICKS === 0) {
+          shot.halfColumn += shot.stepColumn;
+        }
         if (shot.kind === 'bomb') {
           shot.halfColumn += classicBombLateralStep(
             shot.bombFlight, shot.halfRow, shot.ticksInFlight, shot.driftDirection,
@@ -689,7 +736,7 @@ export class BattleScene extends Phaser.Scene {
           continue;
         }
         shot.x = classicHalfColumnX(shot.halfColumn);
-        shot.y = classicHalfRowY(shot.halfRow);
+        shot.y = isTorpedo ? classicTorpedoY(shot.halfRow) : classicHalfRowY(shot.halfRow);
       } else {
         shot.x += shot.vx * dt;
         shot.y += shot.vy * dt;
@@ -722,6 +769,26 @@ export class BattleScene extends Phaser.Scene {
           assisted ? other.y : (shot.y + other.y) / 2);
         this.destroyShot(shot);
         this.destroyShot(other);
+      }
+    }
+
+    // Opposing torpedoes intercept before either can hit a submarine.
+    if (this.torpedo) {
+      const friendly = this.torpedo;
+      const opposing = this.shots.find((shot) => shot.kind === 'enemyTorpedo' &&
+        (this.mode === 'classic'
+          ? classicTorpedoesContact(
+            friendly.prevHalfColumn, friendly.halfColumn, friendly.halfRow,
+            shot.prevHalfColumn, shot.halfColumn, shot.halfRow,
+          )
+          : sweptBoxesOverlap(
+            this.shotBox(friendly, true), this.shotBox(friendly),
+            this.shotBox(shot, true), this.shotBox(shot),
+          )));
+      if (opposing) {
+        this.explode((friendly.x + opposing.x) / 2, (friendly.y + opposing.y) / 2);
+        this.destroyShot(friendly);
+        this.destroyShot(opposing);
       }
     }
 
@@ -768,7 +835,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (this.stage >= 3 && now >= this.nextEnemySub) {
       const subs = this.enemies.filter((e) => e.kind === 'sub').length;
-      if (subs < (this.mode === 'classic' ? 1 : 2)) this.spawnEnemy('sub');
+      if (subs < 1) this.spawnEnemy('sub');
       this.nextEnemySub = now + (this.mode === 'classic'
         ? 7000 + Math.random() * 1400
         : (5500 + Math.random() * 1500) / scale);

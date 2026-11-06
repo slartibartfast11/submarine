@@ -1,4 +1,4 @@
-# Gameplay — v0.2.6
+# Gameplay — v0.2.7
 
 ## Classic: original LCD geometry and time
 
@@ -10,8 +10,12 @@
 - Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. An upward missile and falling bomb/charge intercept if they are in the **same half-column or one immediately adjacent half-column** (e.g. missile at 7 hits bombs at 6, 7 or 8) when their vertical positions overlap. They also intercept if they **cross between adjacent vertical tick states**, avoiding parity-based misses. Missiles never travel or fire between the half-cell positions.
 - **Classic defensive exception:** if an angled bomb in one immediately neighbouring column is on course to hit the submarine at its current depth in the next few ticks, firing an available upward missile also destroys that incoming bomb on the following tick. This is a deliberately limited LCD-gameplay concession, not a wider missile hitbox: no assist for straight drops, bombs moving away, or distant bombs. Standard single-missile lockout still applies.
 - One enemy submarine is visible at a time in Classic. It appears at either edge, fires, may change to the other depth and fire again once its earlier torpedo is gone, and disappears. Its launched torpedoes persist after it vanishes. Each appearance has a finite lifetime; disappearing is not a player kill.
-- Both friendly and enemy torpedoes are rendered as thin, **hollow lozenges** rather than solid rectangular segments.
-- Classic player torpedoes automatically launch toward the side of the currently visible enemy submarine. When no submarine is visible, X does nothing rather than wasting a torpedo. The submarine still needs to be at the appropriate depth to score a hit.
+- Torpedoes are **long, narrow, hollow, asymmetrical sprites**, with tail fins and a rounded nose, placed visually at the hull centreline in both modes.
+- Stage **1-3** unlocks torpedoes permanently for subsequent stages and cycles. One missile and one torpedo may be active **at the same time**, with separate lockouts.
+- Classic torpedoes automatically fire towards a visible enemy submarine. With none present, the shot still launches in the player's last horizontal facing direction; a disappearing enemy can waste the shot.
+- Classic torpedoes advance one half-column **every two clock ticks**; Dynamic torpedoes are slower too. Friendly and enemy torpedoes **intercept each other** when they meet or cross at the same depth, without affecting any in-flight missile.
+- Each enemy submarine chooses its own appearance pattern: **silent decoy**, **single attack**, **fire and change depth**, or **fire, change depth and fire again**. Only one submarine is visible at a time in either mode; shots survive disappearance. Two-shot appearances may briefly have two enemy torpedoes travelling.
+- Classic enemy submarines snap between the two underwater rows. Dynamic ones rest exactly on the two rows, with a short smooth transition on depth-changing patterns. No continuous in-between hovering.
 
 ## Dynamic
 
@@ -29,8 +33,8 @@
 ## Gameplay and progression
 
 - Six horizontal player positions, two underwater depths, arrows/WASD to move.
-- Space fires one upward missile at a time. X fires one horizontal torpedo at a time starting from stage 1-3. Both weapons have independent projectile slots.
-- Every enemy also has one active projectile limit. Shots can outlive their shooter.
+- Space fires one upward missile at a time. X fires one horizontal torpedo at a time from stage 1-3 onward. Both weapons have independent projectile slots.
+- Surface vessels have one active depth charge; planes may have two independent bombs; a two-shot submarine can launch torpedoes at different depths. Shots can outlive their shooter.
 - Missiles can intercept falling bombs or depth charges.
 - Stage progression is **kill-based**, never time-based:
 

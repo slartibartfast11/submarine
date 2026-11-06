@@ -3,13 +3,16 @@ import {
   CLASSIC_COLUMNS, CLASSIC_ROWS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
   classicHalfHitsCell, classicShotsMeet, classicMissileBombContact, classicSubAction,
-  classicTorpedoDirection, classicPlaneCanRelease,
+  classicTorpedoDirection, classicTorpedoY, classicTorpedoesContact,
+  chooseSubPattern, dynamicSubAction, dynamicSubDepthProgress,
+  classicPlaneCanRelease,
   classicBombFlight, classicBombLateralStep, classicAdjacentBombThreat,
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
-  CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, ENTRY_STEP_MS,
+  CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_TORPEDO_MOVE_TICKS,
+  DYNAMIC_TORPEDO_SPEED, ENTRY_STEP_MS, torpedoUnlocked,
   PLAYER_COLUMNS, PLAYER_DEPTHS, CLASSIC_ROW_Y,
   speedScale, stageAfter, stageGoal, stageTarget,
 } from '../src/config.ts';
@@ -104,17 +107,18 @@ test('half-cell coordinates are ordered and stay inside the field', () => {
 });
 test('Classic sub appears, attacks, changes depth, may attack again then vanishes', () => {
   assert.equal(classicSubAction(1, 0, false), 'wait');
-  assert.equal(classicSubAction(3, 0, false), 'fire');
+  assert.equal(classicSubAction(4, 0, false), 'fire');
   assert.equal(classicSubAction(12, 1, true), 'change-depth');
   assert.equal(classicSubAction(15, 1, false), 'fire');
-  assert.equal(classicSubAction(15, 1, true), 'wait');
-  assert.equal(classicSubAction(26, 2, false), 'disappear');
+  assert.equal(classicSubAction(15, 1, true), 'fire');
+  assert.equal(classicSubAction(32, 2, false), 'disappear');
 });
 test('Classic torpedo automatically fires towards the visible enemy side', () => {
   assert.equal(classicTorpedoDirection(2, 0), -1);
   assert.equal(classicTorpedoDirection(2, 5), 1);
-  assert.equal(classicTorpedoDirection(2, null), null);
-  assert.equal(classicTorpedoDirection(0, 0), -1);
+  assert.equal(classicTorpedoDirection(2, null, -1), -1);
+  assert.equal(classicTorpedoDirection(2, null, 1), 1);
+  assert.equal(classicTorpedoDirection(0, 0, -1), -1);
 });
 
 test('Classic reconnaissance flights do not release bombs', () => {
@@ -194,4 +198,51 @@ test('G<cycle><stage> warp codes select any cycle and stage', () => {
   assert.deepEqual(advanceWarpCode('G2', 'Digit4'), { sequence: '', target: null });
   assert.deepEqual(advanceWarpCode('G', 'Space'), { sequence: '', target: null });
   assert.deepEqual(advanceWarpCode('', 'Digit1'), { sequence: '', target: null });
+});
+
+test('torpedoes unlock from 1-3 and remain available in later cycles', () => {
+  assert.equal(torpedoUnlocked(1, 1), false);
+  assert.equal(torpedoUnlocked(1, 2), false);
+  assert.equal(torpedoUnlocked(1, 3), true);
+  assert.equal(torpedoUnlocked(2, 1), true);
+  assert.equal(torpedoUnlocked(3, 2), true);
+  assert.equal(canFire('torpedo', true, false), true);
+  assert.equal(canFire('missile', false, true), true);
+});
+test('Classic torpedoes move one half-column every two ticks', () => {
+  assert.equal(CLASSIC_TORPEDO_MOVE_TICKS, 2);
+  assert.ok(DYNAMIC_TORPEDO_SPEED <= 210);
+});
+test('torpedo render position is exactly level with the hull', () => {
+  assert.equal(classicTorpedoY(9), PLAYER_DEPTHS[0]);
+  assert.equal(classicTorpedoY(11), PLAYER_DEPTHS[1]);
+});
+test('opposing torpedoes intercept at the same submarine depth', () => {
+  assert.equal(classicTorpedoesContact(6, 7, 11, 8, 7, 11), true);
+  assert.equal(classicTorpedoesContact(6, 7, 11, 7, 6, 11), true);
+  assert.equal(classicTorpedoesContact(5, 6, 11, 10, 9, 11), false);
+  assert.equal(classicTorpedoesContact(6, 7, 11, 8, 7, 9), false);
+});
+test('enemy submarines may be decoys, single shooters, dives or double attacks', () => {
+  assert.equal(chooseSubPattern(0.1), 'decoy');
+  assert.equal(chooseSubPattern(0.4), 'single');
+  assert.equal(chooseSubPattern(0.7), 'dive');
+  assert.equal(chooseSubPattern(0.9), 'double');
+  assert.equal(classicSubAction(5, 0, false, 'decoy'), 'wait');
+  assert.equal(classicSubAction(13, 0, false, 'decoy'), 'disappear');
+  assert.equal(classicSubAction(4, 0, false, 'single'), 'fire');
+  assert.equal(classicSubAction(12, 1, false, 'single'), 'wait');
+  assert.equal(classicSubAction(12, 1, false, 'dive'), 'change-depth');
+  assert.equal(classicSubAction(16, 1, false, 'double'), 'fire');
+});
+test('Dynamic subs rest precisely on two depths, with brief transitions', () => {
+  assert.equal(dynamicSubAction(800, 0, 'decoy'), 'wait');
+  assert.equal(dynamicSubAction(2200, 0, 'decoy'), 'disappear');
+  assert.equal(dynamicSubAction(800, 0, 'single'), 'fire');
+  assert.equal(dynamicSubAction(2250, 1, 'double'), 'fire');
+  assert.equal(dynamicSubDepthProgress(1200, 'double'), 0);
+  assert.ok(dynamicSubDepthProgress(1550, 'double') > 0);
+  assert.ok(dynamicSubDepthProgress(1550, 'double') < 1);
+  assert.equal(dynamicSubDepthProgress(1700, 'double'), 1);
+  assert.equal(dynamicSubDepthProgress(9999, 'single'), 0);
 });

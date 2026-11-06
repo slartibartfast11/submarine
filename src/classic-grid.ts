@@ -63,24 +63,80 @@ export function classicMissileBombContact(
   return wereSeparatedWithMissileBelow && nowMissileAboveOrLevel;
 }
 
-/** Classic chooses the visible enemy sub's side, never the player's facing. */
+/** Classic auto-targets a visible submarine; otherwise fire in last facing. */
 export function classicTorpedoDirection(
-  playerColumn: number, enemyColumn: number | null,
-): -1 | 1 | null {
-  if (enemyColumn === null) return null;
-  if (enemyColumn === playerColumn) return enemyColumn < CLASSIC_COLUMNS / 2 ? -1 : 1;
+  playerColumn: number, enemyColumn: number | null, facing: -1 | 1 = 1,
+): -1 | 1 {
+  if (enemyColumn === null || enemyColumn === playerColumn) return facing;
   return enemyColumn < playerColumn ? -1 : 1;
 }
 
-/** A temporary LCD attack pose, not a continuously patrolling enemy. */
+/** A torpedo's logical half-row is rendered on its parent submarine's centreline. */
+export function classicTorpedoY(halfRow: number): number {
+  return CLASSIC_ROW_Y[Math.floor(halfRow / 2)];
+}
+
+/** Collisions include adjacent half-cells and opposing torpedoes swapping cells. */
+export function classicTorpedoesContact(
+  friendlyBefore: number, friendlyAfter: number, friendlyRow: number,
+  enemyBefore: number, enemyAfter: number, enemyRow: number,
+): boolean {
+  if (Math.floor(friendlyRow / 2) !== Math.floor(enemyRow / 2)) return false;
+  const before = friendlyBefore - enemyBefore;
+  const after = friendlyAfter - enemyAfter;
+  return Math.abs(after) <= 1 || before === 0 ||
+    (before < 0 && after > 0) || (before > 0 && after < 0);
+}
+
+export type SubPattern = 'decoy' | 'single' | 'dive' | 'double';
+
+/** Independently chosen attack plans; decoys do absolutely nothing. */
+export function chooseSubPattern(randomValue: number): SubPattern {
+  if (randomValue < 0.28) return 'decoy';
+  if (randomValue < 0.57) return 'single';
+  if (randomValue < 0.78) return 'dive';
+  return 'double';
+}
+
+/** Independent of live shot count: double attacks can fire at both depths. */
 export function classicSubAction(
-  ticks: number, shotsFired: number, shotActive: boolean,
+  ticks: number, shotsFired: number, _shotActive: boolean, pattern: SubPattern = 'double',
 ): ClassicSubAction {
+  if (pattern === 'decoy') return ticks >= 13 ? 'disappear' : 'wait';
+  if (pattern === 'single') {
+    if (ticks >= 22) return 'disappear';
+    return ticks >= 4 && shotsFired === 0 ? 'fire' : 'wait';
+  }
+  if (pattern === 'dive') {
+    if (ticks >= 27) return 'disappear';
+    if (ticks === 12) return 'change-depth';
+    return ticks >= 4 && shotsFired === 0 ? 'fire' : 'wait';
+  }
   if (ticks >= CLASSIC_SUB_LIFETIME_TICKS) return 'disappear';
   if (ticks === 12) return 'change-depth';
-  if (ticks >= 3 && shotsFired === 0 && !shotActive) return 'fire';
-  if (ticks >= 14 && shotsFired === 1 && !shotActive && ticks <= 23) return 'fire';
+  if (ticks >= 4 && shotsFired === 0) return 'fire';
+  if (ticks >= 15 && shotsFired === 1) return 'fire';
   return 'wait';
+}
+
+export type DynamicSubAction = 'wait' | 'fire' | 'disappear';
+export function dynamicSubAction(
+  ageMs: number, shotsFired: number, pattern: SubPattern,
+): DynamicSubAction {
+  const lifetime = pattern === 'decoy' ? 2100 : pattern === 'single' ? 3100 :
+    pattern === 'dive' ? 3700 : 4400;
+  if (ageMs >= lifetime) return 'disappear';
+  if (pattern !== 'decoy' && ageMs >= 700 && shotsFired === 0) return 'fire';
+  if (pattern === 'double' && ageMs >= 2150 && shotsFired === 1) return 'fire';
+  return 'wait';
+}
+
+/** Dynamic sub has a short transition, but only two persistent depth states. */
+export function dynamicSubDepthProgress(ageMs: number, pattern: SubPattern): number {
+  if (pattern !== 'dive' && pattern !== 'double') return 0;
+  if (ageMs <= 1400) return 0;
+  if (ageMs >= 1700) return 1;
+  return (ageMs - 1400) / 300;
 }
 
 export type ClassicBombFlight = 'straight' | 'diagonal' | 'water-hook';

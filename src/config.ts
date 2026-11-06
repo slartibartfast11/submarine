@@ -17,7 +17,9 @@ export const PLAYER_DEPTHS = [CLASSIC_ROW_Y[4], CLASSIC_ROW_Y[5]] as const;
 export const LIVES = 3;
 export const CLASSIC_BASE_TICK_MS = 145;
 export const CLASSIC_ACTOR_MOVE_TICKS = 4;
-export const CLASSIC_SUB_LIFETIME_TICKS = 26;
+export const CLASSIC_SUB_LIFETIME_TICKS = 32;
+export const CLASSIC_TORPEDO_MOVE_TICKS = 2;
+export const DYNAMIC_TORPEDO_SPEED = 200;
 // Slow entrance: column 5, then 4, then 3, with a deliberate hold at each.
 export const ENTRY_STEP_MS = 2100;
 
@@ -54,6 +56,10 @@ export function chooseBest(previous: BestRun, candidate: BestRun): BestRun {
 }
 export function speedScale(cycle: number): number {
   return Math.min(2.5, 1 + (cycle - 1) * 0.14);
+}
+export function torpedoUnlocked(cycle: number, stage: StageNumber): boolean {
+  // The weapon unlocks in game 1-3 and stays available in subsequent cycles.
+  return cycle > 1 || stage === 3;
 }
 export function canFire(weapon: 'missile' | 'torpedo', airborne: boolean, underwater: boolean): boolean {
   return weapon === 'missile' ? !airborne : !underwater;
