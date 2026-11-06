@@ -8,7 +8,7 @@ import {
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
-  canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
+  advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
   CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, ENTRY_STEP_MS,
   PLAYER_COLUMNS, PLAYER_DEPTHS, CLASSIC_ROW_Y,
   speedScale, stageAfter, stageGoal, stageTarget,
@@ -174,4 +174,24 @@ test('No interception when vertical trajectories have not met', () => {
 test('Player has a distinct lower starting depth', () => {
   assert.equal(PLAYER_DEPTHS.length, 2);
   assert.ok(PLAYER_DEPTHS[1] > PLAYER_DEPTHS[0]);
+});
+
+test('G<cycle><stage> warp codes select any cycle and stage', () => {
+  assert.deepEqual(advanceWarpCode('', 'KeyG'), { sequence: 'G', target: null });
+  assert.deepEqual(advanceWarpCode('G', 'Digit1'), { sequence: 'G1', target: null });
+  assert.deepEqual(advanceWarpCode('G1', 'Digit3'), {
+    sequence: '', target: { cycle: 1, stage: 3 },
+  });
+  assert.deepEqual(advanceWarpCode('G2', 'Digit1'), {
+    sequence: '', target: { cycle: 2, stage: 1 },
+  });
+  assert.deepEqual(advanceWarpCode('G3', 'Digit3'), {
+    sequence: '', target: { cycle: 3, stage: 3 },
+  });
+  assert.deepEqual(advanceWarpCode('G2', 'Numpad3'), {
+    sequence: '', target: { cycle: 2, stage: 3 },
+  });
+  assert.deepEqual(advanceWarpCode('G2', 'Digit4'), { sequence: '', target: null });
+  assert.deepEqual(advanceWarpCode('G', 'Space'), { sequence: '', target: null });
+  assert.deepEqual(advanceWarpCode('', 'Digit1'), { sequence: '', target: null });
 });

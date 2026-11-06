@@ -68,10 +68,14 @@ const MASKS: Record<string, string[]> = {
     '..XX..',
     '..XX..',
   ],
+  // Thin outlined lozenge, like a fixed-segment LCD torpedo.
   torpedo: [
-    'XXXXXXXXXXXX',
-    'XXXXXXXXXXXX',
-    '.XXXXXXXXXX.',
+    '...XXXXXX...',
+    '.XX......XX.',
+    'X..........X',
+    'X..........X',
+    '.XX......XX.',
+    '...XXXXXX...',
   ],
   bomb: [
     '..XX..',

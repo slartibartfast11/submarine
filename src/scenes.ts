@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
   CLASSIC_ROW_Y, ENTRY_STEP_MS, COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
-  canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
+  advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
   stageAfter, stageGoal, stageTarget,
-  type BestRun, type GameMode, type StageNumber,
+  type BestRun, type GameMode, type StageNumber, type StagePosition,
 } from './config';
 import { installSprites } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
@@ -110,7 +110,17 @@ export class MenuScene extends Phaser.Scene {
     addLabel(this, 268, 392, '1  CLASSIC  -  STEPPED LCD WORLD', 21);
     addLabel(this, 268, 426, '2  DYNAMIC  -  THE LCD COMES ALIVE', 21);
     addLabel(this, 268, 466, 'ARROWS/WASD: MOVE     SPACE: MISSILE     X: TORPEDO', 14);
+    let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
+      if (event.repeat) return;
+      const warp = advanceWarpCode(warpSequence, event.code);
+      warpSequence = warp.sequence;
+      // At the menu, a warp begins a Classic game at the requested stage.
+      if (warp.target) {
+        this.scene.start('battle', { mode: 'classic', warp: warp.target });
+        return;
+      }
+      if (warpSequence) return;
       if (event.code === 'Digit1' || event.code === 'Numpad1') this.scene.start('battle', { mode: 'classic' });
       if (event.code === 'Digit2' || event.code === 'Numpad2') this.scene.start('battle', { mode: 'dynamic' });
     };
@@ -146,11 +156,17 @@ export class BattleScene extends Phaser.Scene {
   private hud!: LcdHud;
   private gameOverHint!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
+  private warpSequence = '';
+  private startWarp: StagePosition | null = null;
+  private entryTone: OscillatorNode | null = null;
 
   constructor() { super('battle'); }
 
-  init(data: { mode?: GameMode }): void {
+  init(data: { mode?: GameMode; warp?: StagePosition }): void {
     this.mode = data.mode === 'dynamic' ? 'dynamic' : 'classic';
+    this.startWarp = data.warp ?? null;
+    this.warpSequence = '';
+    this.entryTone = null;
     this.elapsed = 0;
     this.classicAccumulator = 0;
     this.cycle = 1;
@@ -181,13 +197,25 @@ export class BattleScene extends Phaser.Scene {
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
     this.gameOverHint = addLabel(this, 290, 509, 'ESC  MENU / START AGAIN', 16).setDepth(30).setVisible(false);
     this.drawHud();
-    this.showStageBanner();
-    this.beginEntry();
+    if (this.startWarp) {
+      this.warpTo(this.startWarp);
+    } else {
+      this.showStageBanner();
+      this.beginEntry();
+    }
 
     const onKey = (event: KeyboardEvent): void => {
       const key = event.code;
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(key)) event.preventDefault();
       if (key === 'Escape') { this.scene.start('menu'); return; }
+      // Warp codes can also be entered during the slow opening animation.
+      // Never permit them after the final loss (no implicit restart).
+      if (!event.repeat && (this.state === 'entering' || this.state === 'playing')) {
+        const warp = advanceWarpCode(this.warpSequence, key);
+        this.warpSequence = warp.sequence;
+        if (warp.target) { this.warpTo(warp.target); return; }
+        if (this.warpSequence) return;
+      }
       // In particular: R, Space and X must NEVER restart a game-over run.
       if (this.state !== 'playing') return;
       if (key === 'ArrowLeft' || key === 'KeyA') {
@@ -249,6 +277,8 @@ export class BattleScene extends Phaser.Scene {
     volume.connect(context.destination);
     tone.start(t);
     tone.stop(t + ENTRY_STEP_MS * 3 / 1000);
+    this.entryTone = tone;
+    tone.onended = () => { if (this.entryTone === tone) this.entryTone = null; };
   }
 
   private beginEntry(): void {
@@ -279,6 +309,31 @@ export class BattleScene extends Phaser.Scene {
       if (this.state !== 'entering') return;
       this.state = 'playing';
     });
+  }
+
+  private warpTo(target: StagePosition): void {
+    if (this.state === 'exploding' || this.state === 'gameOver') return;
+    // End the entry audio if the cheat was typed during the opening sequence.
+    if (this.entryTone) {
+      try { this.entryTone.stop(); } catch { /* Audio may have already stopped. */ }
+      this.entryTone = null;
+    }
+    this.clearBattlefield();
+    this.cycle = target.cycle;
+    this.stage = target.stage;
+    this.stageKills = 0;
+    this.pendingStageAdvance = false;
+    this.resetSpawns();
+    this.warpSequence = '';
+    this.columns = 2;
+    this.depth = 1;
+    this.facing = 1;
+    this.player.setPosition(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth])
+      .setVisible(true).setAlpha(1).setFlipX(false);
+    this.gameOverHint.setVisible(false);
+    this.state = 'playing';
+    this.drawHud();
+    this.showStageBanner();
   }
 
   private advanceStage(): void {

@@ -1,4 +1,4 @@
-# Gameplay — v0.2.5
+# Gameplay — v0.2.6
 
 ## Classic: original LCD geometry and time
 
@@ -10,6 +10,7 @@
 - Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. An upward missile and falling bomb/charge intercept if they are in the **same half-column or one immediately adjacent half-column** (e.g. missile at 7 hits bombs at 6, 7 or 8) when their vertical positions overlap. They also intercept if they **cross between adjacent vertical tick states**, avoiding parity-based misses. Missiles never travel or fire between the half-cell positions.
 - **Classic defensive exception:** if an angled bomb in one immediately neighbouring column is on course to hit the submarine at its current depth in the next few ticks, firing an available upward missile also destroys that incoming bomb on the following tick. This is a deliberately limited LCD-gameplay concession, not a wider missile hitbox: no assist for straight drops, bombs moving away, or distant bombs. Standard single-missile lockout still applies.
 - One enemy submarine is visible at a time in Classic. It appears at either edge, fires, may change to the other depth and fire again once its earlier torpedo is gone, and disappears. Its launched torpedoes persist after it vanishes. Each appearance has a finite lifetime; disappearing is not a player kill.
+- Both friendly and enemy torpedoes are rendered as thin, **hollow lozenges** rather than solid rectangular segments.
 - Classic player torpedoes automatically launch toward the side of the currently visible enemy submarine. When no submarine is visible, X does nothing rather than wasting a torpedo. The submarine still needs to be at the appropriate depth to score a hit.
 
 ## Dynamic
@@ -18,6 +19,12 @@
 - Planes vary speed and altitude smoothly, bombs may drift, and enemy submarines move vertically at the edges.
 - Player torpedoes fire in the submarine's **last horizontal facing direction**, not automatically.
 - Collision uses moving, swept sprite rectangles between frames.
+
+## Stage-warp cheat code
+
+- At the menu, or during Classic/Dynamic gameplay (including submarine entry), type `G` followed by a one-digit **cycle** and one-digit **stage**, e.g. `G13`, `G23`, `G33`.
+- The submarine stages are **1-3, 2-3, 3-3**. `G21` and `G31` work too, but those are the aircraft stages of cycles 2 and 3.
+- Menu warps launch **Classic** directly into the requested stage, skipping the entry animation. In-game warps retain score and lives, reset the target quota, clear the battlefield, and place the player at the bottom-centre starting position. Warping is disabled while exploding and after GAME OVER.
 
 ## Gameplay and progression
 

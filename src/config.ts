@@ -58,3 +58,21 @@ export function speedScale(cycle: number): number {
 export function canFire(weapon: 'missile' | 'torpedo', airborne: boolean, underwater: boolean): boolean {
   return weapon === 'missile' ? !airborne : !underwater;
 }
+
+// Debug stage warp, typed as G<cycle><stage> (e.g. G13, G23, G31).
+// Hidden behind a prefix to avoid changing ordinary movement/firing controls.
+export type WarpCodeState = { sequence: string; target: StagePosition | null };
+export function advanceWarpCode(sequence: string, keyCode: string): WarpCodeState {
+  if (keyCode === 'KeyG') return { sequence: 'G', target: null };
+  const match = /^(?:Digit|Numpad)([1-9])$/.exec(keyCode);
+  if (!match || !sequence.startsWith('G')) return { sequence: '', target: null };
+  if (sequence === 'G') return { sequence: `G${match[1]}`, target: null };
+  if (/^G[1-9]$/.test(sequence)) {
+    const stage = Number(match[1]);
+    return {
+      sequence: '',
+      target: stage >= 1 && stage <= 3 ? { cycle: Number(sequence[1]), stage: stage as StageNumber } : null,
+    };
+  }
+  return { sequence: '', target: null };
+}
