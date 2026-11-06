@@ -268,7 +268,7 @@ export class BattleScene extends Phaser.Scene {
     const headings = ['AIR ATTACK', 'SURFACE SWEEPERS', 'ENEMY SUBMARINES'];
     this.banner.setText(`${this.cycle}-${this.stage}   ${headings[this.stage - 1]}    0/${stageGoal(this.cycle, this.stage)}`);
     this.tweens.killTweensOf(this.banner);
-    this.banner.setAlpha(1);
+    this.banner.setVisible(true).setAlpha(1);
     this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 250 });
   }
 
@@ -374,6 +374,8 @@ export class BattleScene extends Phaser.Scene {
   private hitPlayer(): void {
     if (this.state !== 'playing') return;
     this.state = 'exploding';
+    this.tweens.killTweensOf(this.banner);
+    this.banner.setVisible(false);
     this.playerLives--;
     this.explode(this.player.x, this.player.y);
     this.player.setVisible(false);
