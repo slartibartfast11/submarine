@@ -1,7 +1,7 @@
 import {
   CLASSIC_ROW_Y, CLASSIC_SUB_LIFETIME_TICKS, CLASSIC_CELL_WIDTH,
   PLAYER_COLUMNS, SCREEN,
-} from './config';
+} from './config.ts';
 
 /** Six full columns × six rows. Projectiles occupy twelve half-cells per axis. */
 export const CLASSIC_COLUMNS = 6;

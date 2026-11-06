@@ -7,7 +7,7 @@ import {
   type BestRun, type GameMode, type StageNumber,
 } from './config';
 import { installSprites } from './sprites';
-import { overlapsBox, sweptBoxesOverlap, type Box } from './collision';
+import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
