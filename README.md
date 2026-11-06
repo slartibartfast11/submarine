@@ -1,4 +1,4 @@
-# Depth Watch (working title)
+# Submarine
 
 An original, non-commercial browser arcade game celebrating the design language of late-1980s monochrome LCD handhelds. **Not a recreation of Casio Submarine Battle.** All game artwork and sound will be original.
 
@@ -39,10 +39,10 @@ npm run preview
 
 1. Use the [`slartibartfast11/submarine`](https://github.com/slartibartfast11/submarine) repository.
 2. Keep game changes on the default `main` branch or merge them via pull requests.
-3. GitHub repo Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+3. GitHub repo Settings → Pages → Build and deployment → Source: **GitHub Actions**, not **Deploy from a branch**.
 4. Push to `main`; the included workflow builds and publishes `dist`.
 
-The Vite configuration uses a relative base, so a project site under `/<repo>/` works.
+The Vite configuration uses a relative base, so a project site under `/<repo>/` works. **If Pages displays source HTML rather than the game, change the Pages source to GitHub Actions and re-run the failed deploy workflow.**
 
 ## Specs
 

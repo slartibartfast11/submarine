@@ -69,7 +69,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     installSprites(this);
     drawLandscape(this);
-    addLabel(this, 180, 76, 'DEPTH WATCH', 57);
+    addLabel(this, 320, 76, 'SUBMARINE', 57);
     addLabel(this, 245, 149, 'AN IMAGINARY LCD GAME', 22);
     this.add.image(315, 354, 'player').setScale(1.8);
     this.add.image(650, 250, 'plane').setScale(1.45).setFlipX(true);
