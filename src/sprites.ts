@@ -38,6 +38,7 @@ export function installSprites(scene: Phaser.Scene): void {
   for (const [name, etch] of Object.entries(LCD_SEGMENTS)) {
     if (scene.textures.exists(name)) continue;
     const texture = scene.textures.createCanvas(name, etch.width, etch.height);
+    if (!texture) throw new Error(`Unable to create LCD segment texture: ${name}`);
     const ctx = texture.getContext();
     ctx.fillStyle = `#${COLOURS.dark.toString(16).padStart(6, '0')}`;
     for (const polygon of etch.ink) fillPolygon(ctx, polygon);
