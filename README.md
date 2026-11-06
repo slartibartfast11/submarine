@@ -20,15 +20,15 @@ Your submarine can have **one missile and one torpedo in flight at once**, but c
 
 ## Game modes
 
-**Classic** — A 6×6 LCD field (three sky rows, one surface row and two submarine depths). Planes and boats hold their position for four clock ticks before stepping to the next column; projectiles use a finer half-cell grid, with fore/aft hits. Enemy submarines appear briefly to attack, and Classic torpedoes automatically choose their side.
+**Classic** — A 6×6 LCD field (three sky rows, one surface row and two submarine depths). Planes and boats hold their position for four clock ticks before stepping to the next column; projectiles use a finer half-cell grid, with fore/aft hits. Enemy submarines appear briefly to attack, and Classic torpedoes automatically choose their side. Some aircraft merely reconnoitre; others can release multiple independently travelling bombs, including diagonal and waterline-turning drops.
 
 **Dynamic** — The same monochrome world, brought to life with fluid movement, variable speeds and enemies that respond imperfectly to your position.
 
 The stages cycle from overhead aircraft (**1-1**), to aircraft and surface sweepers (**1-2**), then enemy submarines and torpedoes (**1-3**). **Destroy the stage's target enemies to advance**; simply surviving never advances the stage. Each new cycle increases the pace.
 
-You have three submarines, displayed as LCD Xs. When one is lost, the replacement enters from the right and restarts the same stage. On the final loss, the battlefield freezes and the etched GAME OVER lettering lights up; use **Esc** to return to the menu. The LCD banner also shows a high score for this open page (not stored permanently).
+You have three submarines; each loss lights another ghosted LCD X. When one is lost, the replacement enters from the right and restarts the same stage. On the final loss, the battlefield freezes and the etched GAME OVER lettering lights up; use **Esc** to return to the menu. The LCD banner also shows a high score for this open page (not stored permanently).
 
-This is version 0.2.2, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+This is version 0.2.3, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

@@ -77,7 +77,9 @@ export class LcdHud {
     this.pixels.clear();
     lcdString(this.pixels, `${cycle}-${stage}`, 16, 12, 0.9);
     lcdString(this.pixels, String(score).padStart(5, '0'), 206, 12, 0.9);
-    for (let i = 0; i < LIVES; i++) lifeX(this.pixels, 476 + 39 * i, 17, i < lives);
+    // These Xs record lost submarines, not remaining submarines.
+    // Start with three ghosted outlines; illuminate them left-to-right on losses.
+    for (let i = 0; i < LIVES; i++) lifeX(this.pixels, 476 + 39 * i, 17, i < LIVES - lives);
     lcdString(this.pixels, `${best.cycle}-${best.stage}`, 166, 54, 0.64);
     lcdString(this.pixels, String(best.score).padStart(5, '0'), 259, 54, 0.64);
     this.gameOverField.setColor(gameOver ? '#26372d' : '#acb9a8');

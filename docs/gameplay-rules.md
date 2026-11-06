@@ -1,10 +1,12 @@
-# Gameplay — v0.2.2
+# Gameplay — v0.2.3
 
 ## Classic: original LCD geometry and time
 
 - **6 × 6 shared logical field**: six columns; three aircraft rows, one surface-vessel row, and two underwater submarine rows. Aircraft, surface vessels and submarines use the same horizontal columns.
 - Aircraft and surface boats hold each displayed position for **four shared clock ticks** before advancing one horizontal cell. Aircraft can also vary their altitude by one row when stepping, but never hover or reverse. The clock starts around 145 ms/tick and accelerates on later cycles.
 - Missiles, bombs, charges and torpedoes move on the same clock, but occupy a **12 × 12 half-cell projectile lattice**. They advance one half-cell on each tick.
+- Classic aircraft have distinct sorties: some are **reconnaissance-only** and never release bombs. Attack aircraft can have **up to two bombs in flight simultaneously**; released bombs persist if the aircraft leaves or is destroyed. These probabilities and caps are gameplay tuning values, not confirmed original ROM limits.
+- A released bomb takes one of three discrete trajectories: straight down; intermittent diagonal half-cell steps; or straight through the sky then a lateral step every other tick **after entering the surface/water row**. Bomb paths are fixed when released, not homing.
 - Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. Two opposing projectiles intercept one another only if they occupy the **same half-cell on a tick**; don't simulate invisible intermediate motion.
 - One enemy submarine is visible at a time in Classic. It appears at either edge, fires, may change to the other depth and fire again once its earlier torpedo is gone, and disappears. Its launched torpedoes persist after it vanishes. Each appearance has a finite lifetime; disappearing is not a player kill.
 - Classic player torpedoes automatically launch toward the side of the currently visible enemy submarine. When no submarine is visible, X does nothing rather than wasting a torpedo. The submarine still needs to be at the appropriate depth to score a hit.
@@ -34,7 +36,7 @@ Targets increase slightly in later cycles, with faster movement. Other enemies s
 
 ## Submarine entry, lives and game over
 
-- Three lives, displayed as three fixed LCD X segments that become ghosted when lost.
+- Three submarines total, with **three initially ghosted fixed X segments**. Each lost submarine lights the next X from left to right. The third illuminated X accompanies GAME OVER.
 - New submarine enters at upper depth **column 5 → 4 → 3**, with roughly **2.1 seconds per pose**, plus an original sustained beep. Controls and threats stay inactive during entry.
 - On death, explosion freezes the battlefield; a replacement submarine restarts the same stage's kill quota, keeping score and remaining lives.
 - Final loss freezes the scene and illuminates the etched GAME OVER field in the top LCD strip. **Esc** returns to the menu; gameplay buttons never restart.

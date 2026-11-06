@@ -3,7 +3,8 @@ import {
   CLASSIC_COLUMNS, CLASSIC_ROWS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
   classicHalfHitsCell, classicShotsMeet, classicSubAction,
-  classicTorpedoDirection,
+  classicTorpedoDirection, classicPlaneCanRelease,
+  classicBombFlight, classicBombLateralStep,
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
@@ -112,4 +113,23 @@ test('Classic torpedo automatically fires towards the visible enemy side', () =>
   assert.equal(classicTorpedoDirection(2, 5), 1);
   assert.equal(classicTorpedoDirection(2, null), null);
   assert.equal(classicTorpedoDirection(0, 0), -1);
+});
+
+test('Classic reconnaissance flights do not release bombs', () => {
+  assert.equal(classicPlaneCanRelease(true, 0), false);
+  assert.equal(classicPlaneCanRelease(true, 1), false);
+  assert.equal(classicPlaneCanRelease(false, 0), true);
+  assert.equal(classicPlaneCanRelease(false, 1), true);
+  assert.equal(classicPlaneCanRelease(false, 2), false);
+});
+test('Classic bombs may descend vertically or angle at fixed half-cell intervals', () => {
+  assert.equal(classicBombFlight(0.2), 'straight');
+  assert.equal(classicBombFlight(0.6), 'diagonal');
+  assert.equal(classicBombFlight(0.9), 'water-hook');
+  assert.equal(classicBombLateralStep('straight', 8, 2, 1), 0);
+  assert.equal(classicBombLateralStep('diagonal', 4, 2, -1), -1);
+  assert.equal(classicBombLateralStep('diagonal', 5, 3, 1), 0);
+  assert.equal(classicBombLateralStep('water-hook', 5, 4, 1), 0);
+  assert.equal(classicBombLateralStep('water-hook', 6, 4, 1), 1);
+  assert.equal(classicBombLateralStep('water-hook', 7, 5, 1), 0);
 });

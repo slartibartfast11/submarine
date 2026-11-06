@@ -14,6 +14,8 @@ import {
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
   classicHalfRowY, classicHalfHitsCell, classicShotsMeet,
   classicSubAction, classicTorpedoDirection,
+  classicBombFlight, classicBombLateralStep, classicPlaneCanRelease,
+  type ClassicBombFlight,
 } from './classic-grid';
 
 // Shared across runs within this browser page, but never persisted to storage.
@@ -40,6 +42,8 @@ type Enemy = {
   gridColumn: number;
   gridRow: number;
   shotsFired: number;
+  reconnaissance: boolean;
+  activeBombs: number;
 };
 
 type Shot = {
@@ -56,6 +60,9 @@ type Shot = {
   halfRow: number;
   stepColumn: number;
   stepRow: number;
+  bombFlight: ClassicBombFlight;
+  driftDirection: -1 | 1;
+  ticksInFlight: number;
 };
 
 function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
@@ -314,6 +321,9 @@ export class BattleScene extends Phaser.Scene {
       phase: Math.random() * Math.PI * 2,
       nextShotAt: this.elapsed * 1000 + (kind === 'sub' ? 1400 : 800) + Math.random() * 1200,
       shot: null, airRow, ticksAlive: 0, gridColumn, gridRow, shotsFired: 0,
+      // Some Classic flights are reconnaissance and never release bombs.
+      reconnaissance: kind === 'plane' && this.mode === 'classic' && Math.random() < 0.30,
+      activeBombs: 0,
     };
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
@@ -325,10 +335,18 @@ export class BattleScene extends Phaser.Scene {
       kind, image: this.add.image(x, y, texture).setDepth(4),
       x, y, prevX: x, prevY: y, vx, vy, owner,
       halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
+      bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,
     };
     shot.image.setFlipX(vx < 0);
     this.shots.push(shot);
-    if (owner) owner.shot = shot;
+    if (owner) {
+      // Unlike enemy torpedoes, Classic aircraft bombs may overlap in flight.
+      if (this.mode === 'classic' && owner.kind === 'plane' && kind === 'bomb') {
+        owner.activeBombs++;
+      } else {
+        owner.shot = shot;
+      }
+    }
     return shot;
   }
 
@@ -380,7 +398,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private fireEnemy(enemy: Enemy): void {
-    if (enemy.shot) return;
+    if (this.mode === 'classic' && enemy.kind === 'plane') {
+      if (!classicPlaneCanRelease(enemy.reconnaissance, enemy.activeBombs)) return;
+    } else if (enemy.shot) return;
+
     const kind: ShotKind = enemy.kind === 'sub' ? 'enemyTorpedo' :
       enemy.kind === 'plane' ? 'bomb' : 'charge';
     if (this.mode === 'classic') {
@@ -388,8 +409,12 @@ export class BattleScene extends Phaser.Scene {
         (enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : 0) : Math.floor(Math.random() * 2));
       const horizontal = enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : -1) : 0;
       const vertical = enemy.kind === 'sub' ? 0 : 1;
-      this.addClassicShot(kind, halfColumn, enemy.gridRow * 2 + 1,
+      const shot = this.addClassicShot(kind, halfColumn, enemy.gridRow * 2 + 1,
         horizontal, vertical, enemy);
+      if (enemy.kind === 'plane') {
+        shot.bombFlight = classicBombFlight(Math.random());
+        shot.driftDirection = Math.random() < 0.5 ? -1 : 1;
+      }
       if (enemy.kind === 'sub') enemy.shotsFired++;
     } else {
       let vx = 0;
@@ -406,7 +431,9 @@ export class BattleScene extends Phaser.Scene {
       }
       this.addShot(kind, x, y, vx, vy, enemy);
     }
-    enemy.nextShotAt = this.elapsed * 1000 + 1500 + Math.random() * 2200;
+    enemy.nextShotAt = this.mode === 'classic' && enemy.kind === 'plane'
+      ? this.elapsed * 1000 + (5 + Math.floor(Math.random() * 5)) * classicTickMs(this.cycle)
+      : this.elapsed * 1000 + 1500 + Math.random() * 2200;
   }
 
   private destroyShot(shot: Shot): void {
@@ -414,6 +441,9 @@ export class BattleScene extends Phaser.Scene {
     this.shots = this.shots.filter((s) => s !== shot);
     if (shot === this.missile) this.missile = null;
     if (shot === this.torpedo) this.torpedo = null;
+    if (this.mode === 'classic' && shot.kind === 'bomb' && shot.owner?.kind === 'plane') {
+      shot.owner.activeBombs = Math.max(0, shot.owner.activeBombs - 1);
+    }
     if (shot.owner?.shot === shot) shot.owner.shot = null;
   }
 
@@ -579,8 +609,14 @@ export class BattleScene extends Phaser.Scene {
       shot.prevX = shot.x;
       shot.prevY = shot.y;
       if (this.mode === 'classic') {
-        shot.halfColumn += shot.stepColumn;
+        shot.ticksInFlight++;
         shot.halfRow += shot.stepRow;
+        shot.halfColumn += shot.stepColumn;
+        if (shot.kind === 'bomb') {
+          shot.halfColumn += classicBombLateralStep(
+            shot.bombFlight, shot.halfRow, shot.ticksInFlight, shot.driftDirection,
+          );
+        }
         if (shot.halfColumn < 0 || shot.halfColumn >= CLASSIC_HALF_COLUMNS ||
             shot.halfRow < 0 || shot.halfRow >= CLASSIC_HALF_ROWS) {
           this.destroyShot(shot);

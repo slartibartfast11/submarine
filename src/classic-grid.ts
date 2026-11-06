@@ -62,3 +62,29 @@ export function classicSubAction(
   if (ticks >= 14 && shotsFired === 1 && !shotActive && ticks <= 23) return 'fire';
   return 'wait';
 }
+
+export type ClassicBombFlight = 'straight' | 'diagonal' | 'water-hook';
+
+// A quarter of planes are reconnaissance-only in practice (the spawn chance
+// lives in BattleScene); other aircraft can keep two bombs in flight.
+export function classicPlaneCanRelease(reconnaissance: boolean, activeBombs: number): boolean {
+  return !reconnaissance && activeBombs < 2;
+}
+
+/**
+ * Original-style intermittent releases. Some bombs stay vertical, some begin
+ * angling in the sky, and others go straight until they enter the water.
+ * These are deterministic decisions once each bomb has been launched.
+ */
+export function classicBombFlight(randomValue: number): ClassicBombFlight {
+  return randomValue < 0.45 ? 'straight' : randomValue < 0.70 ? 'diagonal' : 'water-hook';
+}
+
+export function classicBombLateralStep(
+  pattern: ClassicBombFlight, halfRow: number, flightTick: number, direction: -1 | 1,
+): number {
+  if (pattern === 'straight') return 0;
+  if (pattern === 'water-hook' && halfRow < CLASSIC_SURFACE_ROW * 2) return 0;
+  // Move a half-column sideways every two downward half-row steps.
+  return flightTick % 2 === 0 ? direction : 0;
+}
