@@ -32,7 +32,9 @@ You have three submarines; each loss lights another ghosted LCD X. When one is l
 
 The original one-bit sprite artwork has been refined with a patrol aircraft, banked aircraft, deckhouse-and-mast surface vessel, and a compact enemy submarine. The player submarine is unchanged. On arrival, three short original electronic chirps accompany the three submarine positions instead of a sustained tone.
 
-This is version 0.2.8, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+Version 0.2.9 redraws the aircraft, surface escort, enemy submarine, upward missile and torpedo as original **fixed, polygon-etched LCD segments** rather than low-resolution square-pixel sprites. The player submarine, explosions and other gameplay behaviour remain unchanged.
+
+This is version 0.2.9, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

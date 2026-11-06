@@ -600,10 +600,10 @@ export class BattleScene extends Phaser.Scene {
 
   private shotBox(shot: Shot, previous = false): Box {
     // Game objects use the full logical segment rectangle, not opaque pixels.
-    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 30 :
-      shot.kind === 'missile' ? 16 : 12;
+    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 26 :
+      shot.kind === 'missile' ? 12 : 12;
     const height = shot.kind === 'missile' ? 18 :
-      shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 10 : 12;
+      shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 8 : 12;
     return { x: previous ? shot.prevX : shot.x, y: previous ? shot.prevY : shot.y, width, height };
   }
 

@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SPRITE_MASKS } from '../src/sprite-masks.ts';
+import { LCD_SEGMENTS } from '../src/lcd-segments.ts';
 
-test('every LCD sprite is a nonempty fixed-width one-bit mask', () => {
+test('retained bitmap masks are well-formed, with the player untouched', () => {
+  assert.deepEqual(Object.keys(SPRITE_MASKS).sort(), ['bomb', 'player', 'star']);
   for (const [name, mask] of Object.entries(SPRITE_MASKS)) {
     assert.ok(mask.length > 0, name);
     assert.ok(mask[0].length > 0, name);
@@ -12,27 +14,37 @@ test('every LCD sprite is a nonempty fixed-width one-bit mask', () => {
     }
     assert.ok(mask.some(row => row.includes('X')), name);
   }
-});
-
-test('player submarine remains unchanged and the new projectile geometry is compact', () => {
   assert.equal(SPRITE_MASKS.player.length, 13);
   assert.equal(SPRITE_MASKS.player[0].length, 38);
-  assert.equal(SPRITE_MASKS.torpedo[0].length, 15); // 30px at native scale
-  assert.equal(SPRITE_MASKS.torpedo.length, 5);
-  assert.equal(SPRITE_MASKS.missile[0].length, 8); // 16px
-  assert.equal(SPRITE_MASKS.missile.length, 9);    // 18px
 });
 
-test('torpedo is hollow and asymmetric: fins at tail, nose at bow', () => {
-  const mask = SPRITE_MASKS.torpedo;
-  assert.ok(mask[2].includes('...........'));
-  assert.notDeepEqual(mask, mask.map(row => [...row].reverse().join('')));
+test('six revised silhouettes use deliberate etch polygons, not pixel masks', () => {
+  assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
+    'enemySub', 'missile', 'plane', 'planeBank', 'sweeper', 'torpedo',
+  ]);
+  for (const [name, design] of Object.entries(LCD_SEGMENTS)) {
+    assert.ok(design.width > 0 && design.height > 0, name);
+    assert.ok(design.ink.length > 0, name);
+    for (const polygon of [...design.ink, ...design.clear]) {
+      assert.ok(polygon.length >= 3, name);
+      for (const [x, y] of polygon) {
+        assert.ok(x >= 0 && x <= design.width, `${name} x=${x}`);
+        assert.ok(y >= 0 && y <= design.height, `${name} y=${y}`);
+      }
+    }
+  }
 });
 
-test('aircraft have two distinct original poses; surface and enemy subs are separate masks', () => {
-  assert.notDeepEqual(SPRITE_MASKS.plane, SPRITE_MASKS.planeBank);
-  assert.notDeepEqual(SPRITE_MASKS.sweeper, SPRITE_MASKS.enemySub);
-  assert.notDeepEqual(SPRITE_MASKS.player, SPRITE_MASKS.enemySub);
-  assert.ok(SPRITE_MASKS.plane.length >= 10);
-  assert.ok(SPRITE_MASKS.sweeper.length >= 10);
+test('new etched missile and torpedo sizes match their Dynamic collision boxes', () => {
+  assert.deepEqual([LCD_SEGMENTS.missile.width, LCD_SEGMENTS.missile.height], [12, 18]);
+  assert.deepEqual([LCD_SEGMENTS.torpedo.width, LCD_SEGMENTS.torpedo.height], [26, 8]);
+  assert.ok(LCD_SEGMENTS.torpedo.clear.length > 0);
+  assert.notDeepEqual(LCD_SEGMENTS.plane.ink, LCD_SEGMENTS.planeBank.ink);
+  assert.notDeepEqual(LCD_SEGMENTS.enemySub.ink, LCD_SEGMENTS.sweeper.ink);
+});
+
+test('etched silhouettes maintain distinct aircraft, ship and submarine bounds', () => {
+  assert.deepEqual([LCD_SEGMENTS.plane.width, LCD_SEGMENTS.plane.height], [76, 24]);
+  assert.deepEqual([LCD_SEGMENTS.sweeper.width, LCD_SEGMENTS.sweeper.height], [72, 22]);
+  assert.deepEqual([LCD_SEGMENTS.enemySub.width, LCD_SEGMENTS.enemySub.height], [72, 24]);
 });
