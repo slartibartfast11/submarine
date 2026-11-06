@@ -5,6 +5,7 @@ import {
   type GameMode, type StageNumber,
 } from './config';
 import { installSprites } from './sprites';
+import { sweptBoxesOverlap, type Box } from './collision';
 
 type EnemyKind = 'plane' | 'sweeper' | 'sub';
 type ShotKind = 'missile' | 'torpedo' | 'bomb' | 'charge' | 'enemyTorpedo';
@@ -14,6 +15,8 @@ type Enemy = {
   image: Phaser.GameObjects.Image;
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   baseY: number;
   direction: -1 | 1;
   speed: number;
@@ -27,6 +30,8 @@ type Shot = {
   image: Phaser.GameObjects.Image;
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   vx: number;
   vy: number;
   owner: Enemy | null;
@@ -180,6 +185,8 @@ export class BattleScene extends Phaser.Scene {
       image: this.add.image(0, 0, kind === 'sub' ? 'enemySub' : kind).setDepth(3),
       x: isSub ? (direction === 1 ? 29 : SCREEN.width - 29) : (direction === 1 ? -65 : SCREEN.width + 65),
       y,
+      prevX: isSub ? (direction === 1 ? 29 : SCREEN.width - 29) : (direction === 1 ? -65 : SCREEN.width + 65),
+      prevY: y,
       baseY: y,
       direction,
       speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 62 : 41,
@@ -193,7 +200,7 @@ export class BattleScene extends Phaser.Scene {
 
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
     const texture = kind === 'missile' ? 'missile' : kind === 'torpedo' || kind === 'enemyTorpedo' ? 'torpedo' : 'bomb';
-    const shot: Shot = { kind, image: this.add.image(x, y, texture).setDepth(4), x, y, vx, vy, owner };
+    const shot: Shot = { kind, image: this.add.image(x, y, texture).setDepth(4), x, y, prevX: x, prevY: y, vx, vy, owner };
     shot.image.setFlipX(vx < 0);
     this.shots.push(shot);
     if (owner) owner.shot = shot;
@@ -273,17 +280,35 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private shotBox(shot: Shot, previous = false): Box {
+    // These are the full original sprite rectangles, not their drawn pixel masks.
+    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 24 : 12;
+    const height = shot.kind === 'missile' ? 16 : shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 6 : 12;
+    return { x: previous ? shot.prevX : shot.x, y: previous ? shot.prevY : shot.y, width, height };
+  }
+
+  private enemyBox(enemy: Enemy, previous = false): Box {
+    return {
+      x: previous ? enemy.prevX : enemy.x,
+      y: previous ? enemy.prevY : enemy.y,
+      width: enemy.kind === 'plane' ? 76 : 60,
+      height: enemy.kind === 'plane' ? 18 : enemy.kind === 'sweeper' ? 16 : 14,
+    };
+  }
+
   private intersects(shot: Shot, enemy: Enemy): boolean {
-    // Use continuous logical positions, not the stepped drawing position.
-    const halfWidth = enemy.kind === 'plane' ? 38 : enemy.kind === 'sweeper' ? 32 : 30;
-    const halfHeight = enemy.kind === 'plane' ? 13 : 12;
-    return Math.abs(shot.x - enemy.x) < halfWidth && Math.abs(shot.y - enemy.y) < halfHeight;
+    return sweptBoxesOverlap(
+      this.shotBox(shot, true), this.shotBox(shot),
+      this.enemyBox(enemy, true), this.enemyBox(enemy),
+    );
   }
 
   private updateEnemies(dt: number): void {
     const now = this.elapsed * 1000;
     const scale = speedScale(this.cycle);
     for (const enemy of [...this.enemies]) {
+      enemy.prevX = enemy.x;
+      enemy.prevY = enemy.y;
       const motion = this.mode === 'dynamic' ? 0.78 + 0.22 * Math.sin(now * 0.003 + enemy.phase) : 1;
       if (enemy.kind !== 'sub') {
         enemy.x += enemy.direction * enemy.speed * scale * motion * dt;
@@ -326,13 +351,39 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private updateShots(dt: number): void {
+    // First advance ALL projectiles, so crossing shots can be compared over
+    // the same time interval even if they were spawned in a different order.
     for (const shot of [...this.shots]) {
+      shot.prevX = shot.x;
+      shot.prevY = shot.y;
       shot.x += shot.vx * dt;
       shot.y += shot.vy * dt;
       shot.image.setPosition(
         this.mode === 'classic' ? Math.round(shot.x / 5) * 5 : shot.x,
         this.mode === 'classic' ? Math.round(shot.y / 5) * 5 : shot.y,
       );
+    }
+
+    // A rising missile can shoot down a falling bomb or depth charge.
+    // Whole sprite-box intersection counts, even if their visible pixels
+    // would narrowly miss. The projectile paths may cross between frames.
+    for (const shot of [...this.shots]) {
+      if (shot.kind !== 'missile') continue;
+      const target = this.shots.find((other) =>
+        (other.kind === 'bomb' || other.kind === 'charge') &&
+        sweptBoxesOverlap(
+          this.shotBox(shot, true), this.shotBox(shot),
+          this.shotBox(other, true), this.shotBox(other),
+        ),
+      );
+      if (target) {
+        this.explode((shot.x + target.x) / 2, (shot.y + target.y) / 2);
+        this.destroyShot(shot);
+        this.destroyShot(target);
+      }
+    }
+
+    for (const shot of [...this.shots]) {
       if (shot.kind === 'missile' || shot.kind === 'torpedo') {
         const targetKinds: EnemyKind[] = shot.kind === 'missile' ? ['plane', 'sweeper'] : ['sub'];
         const target = this.enemies.find((enemy) => targetKinds.includes(enemy.kind) && this.intersects(shot, enemy));
@@ -341,10 +392,11 @@ export class BattleScene extends Phaser.Scene {
           this.removeEnemy(target, true);
           continue;
         }
-      } else if (
-        Math.abs(shot.x - PLAYER_COLUMNS[this.columns]) < 32 &&
-        Math.abs(shot.y - PLAYER_DEPTHS[this.depth]) < 18
-      ) {
+      } else if (sweptBoxesOverlap(
+        this.shotBox(shot, true), this.shotBox(shot),
+        { x: PLAYER_COLUMNS[this.columns], y: PLAYER_DEPTHS[this.depth], width: 76, height: 26 },
+        { x: PLAYER_COLUMNS[this.columns], y: PLAYER_DEPTHS[this.depth], width: 76, height: 26 },
+      )) {
         this.destroyShot(shot);
         this.hitPlayer();
         continue;

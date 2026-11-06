@@ -32,9 +32,11 @@ Enemy submarines travel **up and down at the edges**, never horizontally approac
 
 - Every enemy combatant has one active projectile slot. An enemy cannot fire again until its projectile hits/exits/expires.
 - Fired projectiles continue even if the shooter is destroyed.
+- Player missiles intercept bombs and depth charges when their sprite boxes overlap; both projectiles resolve with a small explosion.
 - Projectiles must actually intersect targets. A missile must not explode early, and a bomb must originate at a visible enemy.
 - Classic projectiles follow fixed directions; modern projectiles may have limited drift, but **player missiles remain straight up and player torpedoes horizontal**.
-- Collision checks operate on physical position; rendering quantisation must not produce phantom hits.
+- **Gridular collision:** use whole rectangular sprite hitboxes, not opaque-pixel masks or pixel-perfect art collisions. In Classic mode, a missile and bomb that occupy overlapping character boxes are a hit, even if drawn pixels would narrowly miss.
+- Check swept box paths between ticks so fast opposing projectiles cannot pass through one another without registering a hit. Render quantisation does not change collision results.
 
 ## Mode details
 
@@ -49,6 +51,6 @@ Enemy submarines travel **up and down at the edges**, never horizontally approac
 - Hit scores: plane +100, sweeper +150, submarine +200.
 - Torpedo launches in the last horizontal movement direction.
 - Enemy firing rates/speeds, hitboxes and invulnerability are placeholder tuning values.
-- Current code uses limited projectile interpolation; before claiming high-speed fairness, implement swept collision tests and deterministic timing tests.
+- Sprite-box collisions and swept movement checks prevent missed hits between simulation ticks. Fine-tune hitbox dimensions and collision priority through playtesting.
 
 These details should change after playtesting rather than be mistaken for authoritative Casio behaviour.
