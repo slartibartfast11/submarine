@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
-  CLASSIC_TORPEDO_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
+  CLASSIC_TORPEDO_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
   CLASSIC_ROW_Y, ENTRY_STEP_MS, COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
   torpedoUnlocked,
@@ -267,24 +267,29 @@ export class BattleScene extends Phaser.Scene {
     this.torpedo = null;
   }
 
-  private playEntryTone(): void {
-    // Original, deliberately plain sustained electronic tone. No game audio samples.
+  private playEntryChirp(pose: 0 | 1 | 2): void {
+    // A tiny original synth chirp per entrance pose: "brpp ... brpp ... brrp".
+    // The submarine still takes its time arriving; the tone does not sustain.
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
     if (!context || context.state !== 'running') return;
     const tone = context.createOscillator();
     const volume = context.createGain();
-    const t = context.currentTime;
+    const time = context.currentTime;
+    const pitch = [410, 430, 370][pose];
+    const duration = pose === 2 ? 0.22 : 0.16;
     tone.type = 'square';
-    tone.frequency.value = 440;
-    volume.gain.setValueAtTime(0.016, t);
-    const duration = ENTRY_STEP_MS * 3 / 1000;
-    volume.gain.setValueAtTime(0.013, t + duration - 0.14);
-    volume.gain.linearRampToValueAtTime(0.0001, t + duration);
+    tone.frequency.setValueAtTime(pitch, time);
+    tone.frequency.setValueAtTime(pitch * 0.92, time + 0.055);
+    tone.frequency.exponentialRampToValueAtTime(pitch * 0.71, time + duration);
+    volume.gain.setValueAtTime(0.0001, time);
+    volume.gain.linearRampToValueAtTime(0.012, time + 0.008);
+    volume.gain.setValueAtTime(0.010, time + 0.045);
+    volume.gain.exponentialRampToValueAtTime(0.0001, time + duration);
     tone.connect(volume);
     volume.connect(context.destination);
-    tone.start(t);
-    tone.stop(t + ENTRY_STEP_MS * 3 / 1000);
+    tone.start(time);
+    tone.stop(time + duration + 0.012);
     this.entryTone = tone;
     tone.onended = () => { if (this.entryTone === tone) this.entryTone = null; };
   }
@@ -302,16 +307,18 @@ export class BattleScene extends Phaser.Scene {
     this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1]);
     this.gameOverHint.setVisible(false);
     this.drawHud();
-    this.playEntryTone();
+    this.playEntryChirp(0);
     this.time.delayedCall(ENTRY_STEP_MS, () => {
       if (this.state !== 'entering') return;
       this.columns = 3;
       this.player.x = PLAYER_COLUMNS[3];
+      this.playEntryChirp(1);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 2, () => {
       if (this.state !== 'entering') return;
       this.columns = 2;
       this.player.x = PLAYER_COLUMNS[2];
+      this.playEntryChirp(2);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 3, () => {
       if (this.state !== 'entering') return;
@@ -381,7 +388,7 @@ export class BattleScene extends Phaser.Scene {
       kind,
       image: this.add.image(x, y, kind === 'sub' ? 'enemySub' : kind).setDepth(3),
       x, y, prevX: x, prevY: y, baseY: y, direction,
-      speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 62 : 41,
+      speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 39 : 41,
       phase: Math.random() * Math.PI * 2,
       nextShotAt: this.elapsed * 1000 + (kind === 'sub' ? 1400 : 800) + Math.random() * 1200,
       shot: null, airRow, ticksAlive: 0, gridColumn, gridRow, shotsFired: 0,
@@ -592,9 +599,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private shotBox(shot: Shot, previous = false): Box {
-    // These are the full original sprite rectangles, not their drawn pixel masks.
-    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 50 : 12;
-    const height = shot.kind === 'missile' ? 16 : shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 10 : 12;
+    // Game objects use the full logical segment rectangle, not opaque pixels.
+    const width = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 30 :
+      shot.kind === 'missile' ? 16 : 12;
+    const height = shot.kind === 'missile' ? 18 :
+      shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo' ? 10 : 12;
     return { x: previous ? shot.prevX : shot.x, y: previous ? shot.prevY : shot.y, width, height };
   }
 
@@ -602,8 +611,8 @@ export class BattleScene extends Phaser.Scene {
     return {
       x: previous ? enemy.prevX : enemy.x,
       y: previous ? enemy.prevY : enemy.y,
-      width: enemy.kind === 'plane' ? 76 : 60,
-      height: enemy.kind === 'plane' ? 18 : enemy.kind === 'sweeper' ? 16 : 14,
+      width: enemy.kind === 'plane' ? 76 : 72,
+      height: enemy.kind === 'plane' ? 24 : enemy.kind === 'sweeper' ? 22 : 24,
     };
   }
 
@@ -628,7 +637,9 @@ export class BattleScene extends Phaser.Scene {
         enemy.ticksAlive++;
         if (enemy.kind === 'plane' || enemy.kind === 'sweeper') {
           // An LCD pose persists for four shared-clock ticks.
-          if (enemy.ticksAlive % CLASSIC_ACTOR_MOVE_TICKS === 0) {
+          const poseTicks = enemy.kind === 'sweeper' ?
+            CLASSIC_SURFACE_MOVE_TICKS : CLASSIC_ACTOR_MOVE_TICKS;
+          if (enemy.ticksAlive % poseTicks === 0) {
             if (enemy.kind === 'plane') {
               const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
               const next = classicPlaneStep(enemy.x, enemy.gridRow, enemy.direction, delta);

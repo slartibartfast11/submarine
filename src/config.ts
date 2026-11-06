@@ -17,6 +17,7 @@ export const PLAYER_DEPTHS = [CLASSIC_ROW_Y[4], CLASSIC_ROW_Y[5]] as const;
 export const LIVES = 3;
 export const CLASSIC_BASE_TICK_MS = 145;
 export const CLASSIC_ACTOR_MOVE_TICKS = 4;
+export const CLASSIC_SURFACE_MOVE_TICKS = 8;
 export const CLASSIC_SUB_LIFETIME_TICKS = 32;
 export const CLASSIC_TORPEDO_MOVE_TICKS = 2;
 export const DYNAMIC_TORPEDO_SPEED = 200;

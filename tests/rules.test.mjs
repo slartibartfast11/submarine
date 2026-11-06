@@ -11,7 +11,8 @@ import {
 import assert from 'node:assert/strict';
 import {
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
-  CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_TORPEDO_MOVE_TICKS,
+  CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS,
+  CLASSIC_TORPEDO_MOVE_TICKS,
   DYNAMIC_TORPEDO_SPEED, ENTRY_STEP_MS, torpedoUnlocked,
   PLAYER_COLUMNS, PLAYER_DEPTHS, CLASSIC_ROW_Y,
   speedScale, stageAfter, stageGoal, stageTarget,
@@ -64,6 +65,7 @@ test('Classic is a discrete shared clock which accelerates by cycle', () => {
   assert.ok(classicTickMs(2) < classicTickMs(1));
   assert.ok(ENTRY_STEP_MS >= 2000);
   assert.equal(CLASSIC_ACTOR_MOVE_TICKS, 4);
+  assert.equal(CLASSIC_SURFACE_MOVE_TICKS, 8);
 });
 test('Classic planes ALWAYS advance horizontally, independently of altitude', () => {
   for (const direction of [-1, 1]) {

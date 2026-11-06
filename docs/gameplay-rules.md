@@ -1,16 +1,16 @@
-# Gameplay — v0.2.7
+# Gameplay — v0.2.8
 
 ## Classic: original LCD geometry and time
 
 - **6 × 6 shared logical field**: six columns; three aircraft rows, one surface-vessel row, and two underwater submarine rows. Aircraft, surface vessels and submarines use the same horizontal columns.
-- Aircraft and surface boats hold each displayed position for **four shared clock ticks** before advancing one horizontal cell. Aircraft can also vary their altitude by one row when stepping, but never hover or reverse. The clock starts around 145 ms/tick and accelerates on later cycles.
+- Aircraft hold each pose for **four shared clock ticks** and surface boats for **eight ticks** before advancing one horizontal cell. Aircraft can also vary their altitude by one row when stepping, but never hover or reverse. The clock starts around 145 ms/tick and accelerates on later cycles.
 - Missiles, bombs, charges and torpedoes move on the same clock, but occupy a **12 × 12 half-cell projectile lattice**. They advance one half-cell on each tick.
 - Classic aircraft have distinct sorties: some are **reconnaissance-only** and never release bombs. Attack aircraft can have **up to two bombs in flight simultaneously**; released bombs persist if the aircraft leaves or is destroyed. These probabilities and caps are gameplay tuning values, not confirmed original ROM limits.
 - A released bomb takes one of three discrete trajectories: straight down; intermittent diagonal half-cell steps; or straight through the sky then a lateral step every other tick **after entering the surface/water row**. Bomb paths are fixed when released, not homing.
 - Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. An upward missile and falling bomb/charge intercept if they are in the **same half-column or one immediately adjacent half-column** (e.g. missile at 7 hits bombs at 6, 7 or 8) when their vertical positions overlap. They also intercept if they **cross between adjacent vertical tick states**, avoiding parity-based misses. Missiles never travel or fire between the half-cell positions.
 - **Classic defensive exception:** if an angled bomb in one immediately neighbouring column is on course to hit the submarine at its current depth in the next few ticks, firing an available upward missile also destroys that incoming bomb on the following tick. This is a deliberately limited LCD-gameplay concession, not a wider missile hitbox: no assist for straight drops, bombs moving away, or distant bombs. Standard single-missile lockout still applies.
 - One enemy submarine is visible at a time in Classic. It appears at either edge, fires, may change to the other depth and fire again once its earlier torpedo is gone, and disappears. Its launched torpedoes persist after it vanishes. Each appearance has a finite lifetime; disappearing is not a player kill.
-- Torpedoes are **long, narrow, hollow, asymmetrical sprites**, with tail fins and a rounded nose, placed visually at the hull centreline in both modes.
+- Torpedoes are **compact, narrow, hollow, asymmetrical sprites** (30×10 px at native scale), with tail fins and a rounded nose, placed visually at the hull centreline in both modes.
 - Stage **1-3** unlocks torpedoes permanently for subsequent stages and cycles. One missile and one torpedo may be active **at the same time**, with separate lockouts.
 - Classic torpedoes automatically fire towards a visible enemy submarine. With none present, the shot still launches in the player's last horizontal facing direction; a disappearing enemy can waste the shot.
 - Classic torpedoes advance one half-column **every two clock ticks**; Dynamic torpedoes are slower too. Friendly and enemy torpedoes **intercept each other** when they meet or cross at the same depth, without affecting any in-flight missile.
@@ -49,7 +49,7 @@ Targets increase slightly in later cycles, with faster movement. Other enemies s
 ## Submarine entry, lives and game over
 
 - Three submarines total, with **three initially ghosted fixed X segments**. Each lost submarine lights the next X from left to right. The third illuminated X accompanies GAME OVER.
-- New submarine enters at lower depth **column 5 → 4 → 3**, with roughly **2.1 seconds per pose**, plus an original sustained beep. Controls and threats stay inactive during entry.
+- New submarine enters at lower depth **column 5 → 4 → 3**, with roughly **2.1 seconds per pose** and one **brief, slightly descending electronic chirp per position**, rather than a held tone. Controls and threats stay inactive during entry.
 - On death, explosion freezes the battlefield; a replacement submarine restarts the same stage's kill quota, keeping score and remaining lives.
 - Final loss freezes the scene and illuminates the etched GAME OVER field in the top LCD strip. **Esc** returns to the menu; gameplay buttons never restart.
 
@@ -58,6 +58,12 @@ Targets increase slightly in later cycles, with faster movement. Other enemies s
 - Current stage, score and session high score/stage use seven-segment-style digits.
 - The high score lasts across games in the same page lifetime but is not persisted.
 - Current prototype scores: aircraft 100, surface vessel 150, enemy submarine 200 points.
+
+## v0.2.8 graphics and pacing
+
+- Plane, banked-plane, surface-escort, enemy-submarine, upward missile and torpedo masks are newly authored original one-bit LCD silhouettes. The player submarine remains unchanged.
+- Surface vessels are deliberately slower than aircraft: eight shared ticks per column in Classic, and 39px/s nominal versus 94px/s aircraft speed in Dynamic.
+- Missile and torpedo hitboxes are sized to match the revised physical masks. All movement and collision logic otherwise remains unchanged.
 
 ## Originality
 
