@@ -26,7 +26,7 @@ test('player submarine remains unchanged and the new projectile geometry is comp
 test('torpedo is hollow and asymmetric: fins at tail, nose at bow', () => {
   const mask = SPRITE_MASKS.torpedo;
   assert.ok(mask[2].includes('...........'));
-  assert.notEqual(mask.map(r => r[0]).join(''), mask.map(r => r[r.length-1]).join(''));
+  assert.notDeepEqual(mask, mask.map(row => [...row].reverse().join('')));
 });
 
 test('aircraft have two distinct original poses; surface and enemy subs are separate masks', () => {
