@@ -1,4 +1,4 @@
-# Gameplay — v0.2.3
+# Gameplay — v0.2.4
 
 ## Classic: original LCD geometry and time
 
@@ -7,7 +7,8 @@
 - Missiles, bombs, charges and torpedoes move on the same clock, but occupy a **12 × 12 half-cell projectile lattice**. They advance one half-cell on each tick.
 - Classic aircraft have distinct sorties: some are **reconnaissance-only** and never release bombs. Attack aircraft can have **up to two bombs in flight simultaneously**; released bombs persist if the aircraft leaves or is destroyed. These probabilities and caps are gameplay tuning values, not confirmed original ROM limits.
 - A released bomb takes one of three discrete trajectories: straight down; intermittent diagonal half-cell steps; or straight through the sky then a lateral step every other tick **after entering the surface/water row**. Bomb paths are fixed when released, not homing.
-- Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. Two opposing projectiles intercept one another only if they occupy the **same half-cell on a tick**; don't simulate invisible intermediate motion.
+- Whole-cell sprites are hit by projectiles in **either half of that cell**, including fore/aft halves relative to aircraft travel. Two opposing projectiles normally intercept one another only if they occupy the **same half-cell on a tick**; don't simulate invisible intermediate motion.
+- **Classic defensive exception:** if an angled bomb in one immediately neighbouring column is on course to hit the submarine at its current depth in the next few ticks, firing an available upward missile also destroys that incoming bomb on the following tick. This is a deliberately limited LCD-gameplay concession, not a wider missile hitbox: no assist for straight drops, bombs moving away, or distant bombs. Standard single-missile lockout still applies.
 - One enemy submarine is visible at a time in Classic. It appears at either edge, fires, may change to the other depth and fire again once its earlier torpedo is gone, and disappears. Its launched torpedoes persist after it vanishes. Each appearance has a finite lifetime; disappearing is not a player kill.
 - Classic player torpedoes automatically launch toward the side of the currently visible enemy submarine. When no submarine is visible, X does nothing rather than wasting a torpedo. The submarine still needs to be at the appropriate depth to score a hit.
 

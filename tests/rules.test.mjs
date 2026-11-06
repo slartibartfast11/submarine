@@ -4,7 +4,7 @@ import {
   CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
   classicHalfHitsCell, classicShotsMeet, classicSubAction,
   classicTorpedoDirection, classicPlaneCanRelease,
-  classicBombFlight, classicBombLateralStep,
+  classicBombFlight, classicBombLateralStep, classicAdjacentBombThreat,
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
@@ -132,4 +132,23 @@ test('Classic bombs may descend vertically or angle at fixed half-cell intervals
   assert.equal(classicBombLateralStep('water-hook', 5, 4, 1), 0);
   assert.equal(classicBombLateralStep('water-hook', 6, 4, 1), 1);
   assert.equal(classicBombLateralStep('water-hook', 7, 5, 1), 0);
+});
+
+test('Classic missile emergency interception catches an adjacent incoming diagonal bomb', () => {
+  // Player at column 3 (zero-based 2), upper depth row 4; bomb in adjacent
+  // left-hand cell, dropping diagonally into the player's cell next tick.
+  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, 1, 2, 4), true);
+  // Mirrors correctly for a bomb approaching from the right.
+  assert.equal(classicAdjacentBombThreat(6, 7, 'diagonal', 1, -1, 2, 4), true);
+  // Applies to the lower submarine depth too.
+  assert.equal(classicAdjacentBombThreat(3, 9, 'water-hook', 1, 1, 2, 5), true);
+});
+test('Emergency assist cannot clear harmless, distant or vertical bombs', () => {
+  assert.equal(classicAdjacentBombThreat(3, 7, 'straight', 1, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, -1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(1, 7, 'diagonal', 1, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(3, 4, 'diagonal', 1, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(2, 7, 'diagonal', 1, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(4, 7, 'diagonal', 1, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, 1, 2, 5), false);
 });

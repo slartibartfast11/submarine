@@ -88,3 +88,36 @@ export function classicBombLateralStep(
   // Move a half-column sideways every two downward half-row steps.
   return flightTick % 2 === 0 ? direction : 0;
 }
+
+/**
+ * Classic's deliberate interception concession: a straight-up launch can
+ * catch a diagonal bomb from ONE neighbouring whole cell if its next few
+ * half-cell steps would hit the submarine at its current depth.
+ *
+ * This only forecasts the established, non-homing bomb path. It does not
+ * expand ordinary collision boxes or grant the missile diagonal movement.
+ */
+export function classicAdjacentBombThreat(
+  halfColumn: number, halfRow: number, pattern: ClassicBombFlight,
+  ticksInFlight: number, driftDirection: -1 | 1,
+  playerColumn: number, playerRow: number,
+): boolean {
+  if (pattern === 'straight') return false;
+  const bombColumn = Math.floor(halfColumn / 2);
+  if (Math.abs(bombColumn - playerColumn) !== 1) return false;
+  if (driftDirection !== (playerColumn < bombColumn ? -1 : 1)) return false;
+  const playerTop = playerRow * 2;
+  // The threat must be beside the sub or in the immediately higher row.
+  if (halfRow < playerTop - 2 || halfRow > playerTop + 1) return false;
+
+  let col = halfColumn;
+  let row = halfRow;
+  // A strictly local emergency window; not an across-screen defence.
+  for (let tick = 1; tick <= 3; tick++) {
+    row++;
+    col += classicBombLateralStep(pattern, row, ticksInFlight + tick, driftDirection);
+    if (row >= CLASSIC_HALF_ROWS || col < 0 || col >= CLASSIC_HALF_COLUMNS) break;
+    if (classicHalfHitsCell(col, row, playerColumn, playerRow)) return true;
+  }
+  return false;
+}

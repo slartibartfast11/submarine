@@ -15,7 +15,7 @@ import {
   classicHalfRowY, classicHalfHitsCell, classicShotsMeet,
   classicSubAction, classicTorpedoDirection,
   classicBombFlight, classicBombLateralStep, classicPlaneCanRelease,
-  type ClassicBombFlight,
+  classicAdjacentBombThreat, type ClassicBombFlight,
 } from './classic-grid';
 
 // Shared across runs within this browser page, but never persisted to storage.
@@ -63,6 +63,7 @@ type Shot = {
   bombFlight: ClassicBombFlight;
   driftDirection: -1 | 1;
   ticksInFlight: number;
+  emergencyIntercept: Shot | null;
 };
 
 function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
@@ -336,6 +337,7 @@ export class BattleScene extends Phaser.Scene {
       x, y, prevX: x, prevY: y, vx, vy, owner,
       halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
       bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,
+      emergencyIntercept: null,
     };
     shot.image.setFlipX(vx < 0);
     this.shots.push(shot);
@@ -371,6 +373,15 @@ export class BattleScene extends Phaser.Scene {
       // Turning the sub (by moving left/right) selects its fore/aft half.
       const halfColumn = this.columns * 2 + (this.facing === 1 ? 1 : 0);
       this.missile = this.addClassicShot('missile', halfColumn, (4 + this.depth) * 2, 0, -1, null);
+      // A diagonal bomb can otherwise be impossible to intercept with a
+      // vertical-only missile. If it will hit from the neighbouring cell,
+      // arm an emergency interception for the next shared clock tick.
+      this.missile.emergencyIntercept = this.shots.find((shot) =>
+        shot.kind === 'bomb' && classicAdjacentBombThreat(
+          shot.halfColumn, shot.halfRow, shot.bombFlight,
+          shot.ticksInFlight, shot.driftDirection, this.columns, 4 + this.depth,
+        ),
+      ) ?? null;
     } else {
       this.missile = this.addShot('missile', PLAYER_COLUMNS[this.columns],
         PLAYER_DEPTHS[this.depth] - 26, 0, -330, null);
@@ -634,7 +645,9 @@ export class BattleScene extends Phaser.Scene {
     // A missile destroys a falling bomb/charge in the same occupied half-cell.
     for (const shot of [...this.shots]) {
       if (shot.kind !== 'missile') continue;
-      const other = this.shots.find((candidate) =>
+      const assisted = this.mode === 'classic' && shot.emergencyIntercept !== null &&
+        this.shots.includes(shot.emergencyIntercept) ? shot.emergencyIntercept : null;
+      const other = assisted ?? this.shots.find((candidate) =>
         (candidate.kind === 'bomb' || candidate.kind === 'charge') &&
         (this.mode === 'classic'
           ? classicShotsMeet(shot.halfColumn, shot.halfRow, candidate.halfColumn, candidate.halfRow)
@@ -644,7 +657,10 @@ export class BattleScene extends Phaser.Scene {
           )),
       );
       if (other) {
-        this.explode((shot.x + other.x) / 2, (shot.y + other.y) / 2);
+        // Assisted hits explode at the actual bomb, not midway between
+        // two LCD cells. The missile still launched straight upward.
+        this.explode(assisted ? other.x : (shot.x + other.x) / 2,
+          assisted ? other.y : (shot.y + other.y) / 2);
         this.destroyShot(shot);
         this.destroyShot(other);
       }
