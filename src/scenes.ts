@@ -699,7 +699,7 @@ export class BattleScene extends Phaser.Scene {
       }
 
       if (now < enemy.nextShotAt || enemy.shot) continue;
-      if (this.mode === 'dynamic' && enemy.kind !== 'sub') {
+      if (this.mode === 'dynamic') {
         const recentlyRevealed = now - this.lastLaunchTime < 3300;
         const interest = Math.min(0.65, 0.15 + this.cycle * 0.065);
         if (recentlyRevealed && Math.random() < interest && Math.abs(enemy.x - this.lastLaunchX) > 65) {
