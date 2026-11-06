@@ -20,7 +20,7 @@ Your submarine can have **one missile and one torpedo in flight at once**, but c
 
 ## Game modes
 
-**Classic** — A deliberately stepped LCD world with fixed enemy paths, simple animations and partly random attacks.
+**Classic** — The entire LCD world advances on a shared electronic tick. Aircraft always step across the screen horizontally, sometimes climbing or diving as they go. Missiles, bombs and ships move on the same clock; there's no in-between animation.
 
 **Dynamic** — The same monochrome world, brought to life with fluid movement, variable speeds and enemies that respond imperfectly to your position.
 
@@ -28,7 +28,7 @@ The stages cycle from overhead aircraft (**1-1**), to aircraft and surface sweep
 
 You have three submarines, displayed as LCD Xs. When one is lost, the replacement enters from the right and restarts the same stage. On the final loss, the battlefield freezes and the etched GAME OVER lettering lights up; use **Esc** to return to the menu. The LCD banner also shows a high score for this open page (not stored permanently).
 
-This is version 0.2, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+This is version 0.2.1, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canFire, chooseBest, PLAYER_COLUMNS, PLAYER_DEPTHS,
+  canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
+  CLASSIC_AIR_STEP, ENTRY_STEP_MS, PLAYER_COLUMNS, PLAYER_DEPTHS,
   speedScale, stageAfter, stageGoal, stageTarget,
 } from '../src/config.ts';
 
@@ -39,4 +40,24 @@ test('difficulty grows but is capped', () => {
   assert.equal(speedScale(1), 1);
   assert.ok(speedScale(2) > speedScale(1));
   assert.equal(speedScale(99), 2.5);
+});
+
+test('Classic is a discrete shared clock which accelerates by cycle', () => {
+  assert.ok(classicTickMs(1) >= 100 && classicTickMs(1) <= 175);
+  assert.ok(classicTickMs(2) < classicTickMs(1));
+  assert.ok(ENTRY_STEP_MS > classicTickMs(1) * 4);
+});
+test('Classic planes ALWAYS advance horizontally, independently of altitude', () => {
+  for (const direction of [-1, 1]) {
+    for (let row = 0; row < CLASSIC_AIR_ROWS.length; row++) {
+      for (const vertical of [-1, 0, 1]) {
+        const next = classicPlaneStep(400, row, direction, vertical);
+        assert.equal(next.x, 400 + CLASSIC_AIR_STEP * direction);
+        assert.ok(next.row >= 0 && next.row < CLASSIC_AIR_ROWS.length);
+        assert.ok(Math.abs(next.row - row) <= 1);
+      }
+    }
+  }
+  assert.deepEqual(classicPlaneStep(0, 1, 1, -1), { x: CLASSIC_AIR_STEP, row: 0 });
+  assert.deepEqual(classicPlaneStep(0, 0, -1, -1), { x: -CLASSIC_AIR_STEP, row: 0 });
 });

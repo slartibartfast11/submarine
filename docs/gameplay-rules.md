@@ -1,4 +1,4 @@
-# Gameplay — v0.2
+# Gameplay — v0.2.1
 
 ## Fundamental rules
 
@@ -6,8 +6,13 @@
 - One active missile and one active torpedo independently. Both may be in flight together; missed shots must expire before re-firing that weapon.
 - One live projectile per enemy combatant. Previously fired shots can remain after the attacker is destroyed.
 - Missile goes straight upward, torpedo moves horizontally in the last left/right movement direction.
-- Missiles intercept falling bombs or charges. Logical sprite rectangles, including swept collision between frames, determine contact rather than opaque-pixel collisions.
-- Classic uses stepped graphics and predictable enemy paths with some random bombing. Dynamic uses the same artwork but flexible speeds, vertical changes and imperfect awareness.
+- Missiles intercept falling bombs or charges. Both modes use logical sprite rectangles rather than opaque-pixel collisions. Only Dynamic mode uses swept collision between frames.
+- Classic advances aircraft, sweepers, submarines, bombs, missiles and torpedoes on a **shared discrete LCD clock**, not smoothly animated sprites. Dynamic retains the continuous-motion simulation with the same artwork.
+- Classic planes always move horizontally by one aircraft-grid step on each tick, left-to-right or right-to-left without reversing. They may simultaneously hold altitude, climb or descend by one sky row, chosen with limited randomness. **No vertical-only plane movements.**
+- The aircraft grid (40 px steps) is independent of the five-position player grid. Sweepers and enemy subs also update only on clock ticks, at their own integer tick multiples.
+- Classic projectiles advance once per clock tick, and collision checks use occupied sprite rectangles on each state. Dynamic checks swept rectangular collision paths between smooth simulation frames.
+- As cycles advance, Classic speeds up by shortening the *global tick interval*, not by multiplying movement jumps. Dynamic retains continuous speed scaling.
+
 
 ## Stages — kill objectives, not a clock
 
@@ -25,7 +30,7 @@ The stage quotas, scoring values, speeds and hitboxes are prototype tuning value
 ## Lives, entry and game over
 
 - Three submarines total. Show three large fixed LCD X segments, active or faintly ghosted.
-- At game start and after each non-final death, the fresh submarine enters at upper depth: column **5 → 4 → 3** in three stepped poses with an original long electronic ready beep. Gameplay starts in column 3. Player cannot shoot or be hit during entry.
+- At game start and after each non-final death, the fresh submarine **slowly creeps** in at upper depth: column **5 → 4 → 3**, holding each pose about **900 ms** and then starting gameplay after 2.7 seconds. A sustained original electronic ready beep accompanies entry. Player cannot shoot or be hit during entry.
 - A hit explodes and removes the submarine, freezes combat, consumes one X and resets the current stage once the entry sequence starts. The score and remaining Xs persist.
 - The third hit explodes; **all actors freeze in place**; the permanently etched, normally ghosted **GAME OVER** lettering in the top LCD strip lights up. No respawn and no automatic scene change.
 - Only **Esc** returns to the title menu. Fire, R, and other gameplay keys never restart.
