@@ -20,7 +20,8 @@ test('retained bitmap masks are well-formed, with the player untouched', () => {
 
 test('six revised silhouettes use deliberate etch polygons, not pixel masks', () => {
   assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
-    'enemySub', 'missile', 'plane', 'planeBank', 'sweeper', 'torpedo',
+    'enemySub', 'missile', 'plane', 'planeBankLeft', 'planeBankRight',
+    'planeClimb', 'sweeper', 'torpedo',
   ]);
   for (const [name, design] of Object.entries(LCD_SEGMENTS)) {
     assert.ok(design.width > 0 && design.height > 0, name);
@@ -39,12 +40,16 @@ test('new etched missile and torpedo sizes match their Dynamic collision boxes',
   assert.deepEqual([LCD_SEGMENTS.missile.width, LCD_SEGMENTS.missile.height], [12, 18]);
   assert.deepEqual([LCD_SEGMENTS.torpedo.width, LCD_SEGMENTS.torpedo.height], [26, 8]);
   assert.ok(LCD_SEGMENTS.torpedo.clear.length > 0);
-  assert.notDeepEqual(LCD_SEGMENTS.plane.ink, LCD_SEGMENTS.planeBank.ink);
+  assert.notDeepEqual(LCD_SEGMENTS.plane.ink, LCD_SEGMENTS.planeBankRight.ink);
+  assert.notDeepEqual(LCD_SEGMENTS.planeBankLeft.ink, LCD_SEGMENTS.planeBankRight.ink);
+  assert.notDeepEqual(LCD_SEGMENTS.planeClimb.ink, LCD_SEGMENTS.plane.ink);
   assert.notDeepEqual(LCD_SEGMENTS.enemySub.ink, LCD_SEGMENTS.sweeper.ink);
 });
 
 test('etched silhouettes maintain distinct aircraft, ship and submarine bounds', () => {
-  assert.deepEqual([LCD_SEGMENTS.plane.width, LCD_SEGMENTS.plane.height], [76, 24]);
+  for (const name of ['plane', 'planeBankRight', 'planeBankLeft', 'planeClimb']) {
+    assert.deepEqual([LCD_SEGMENTS[name].width, LCD_SEGMENTS[name].height], [76, 38], name);
+  }
   assert.deepEqual([LCD_SEGMENTS.sweeper.width, LCD_SEGMENTS.sweeper.height], [72, 22]);
   assert.deepEqual([LCD_SEGMENTS.enemySub.width, LCD_SEGMENTS.enemySub.height], [72, 24]);
 });

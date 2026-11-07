@@ -28,6 +28,22 @@ export function classicTickMs(cycle: number): number {
   return CLASSIC_BASE_TICK_MS / speedScale(cycle);
 }
 
+export type PlanePose = 'plane' | 'planeBankRight' | 'planeBankLeft' | 'planeClimb';
+
+/**
+ * Classic flight changes select one etched LCD mask; no sprite rotation.
+ * Dynamic mode can use this same family with continuous movement.
+ */
+export function planePoseForMotion(
+  verticalChange: number, travelDirection: -1 | 1,
+): { texture: PlanePose; flipX: boolean } {
+  if (verticalChange < 0) return { texture: 'planeClimb', flipX: travelDirection === -1 };
+  if (verticalChange > 0) {
+    return { texture: travelDirection === 1 ? 'planeBankRight' : 'planeBankLeft', flipX: false };
+  }
+  return { texture: 'plane', flipX: travelDirection === -1 };
+}
+
 export function classicPlaneStep(
   x: number, row: number, direction: -1 | 1, verticalChange: -1 | 0 | 1,
 ): { x: number; row: number } {

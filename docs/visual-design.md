@@ -16,14 +16,14 @@ An original browser game that looks like a lovingly designed imaginary 1985–19
 
 ## Sprites / motion
 
-- Aircraft are original side-view patrol silhouettes, with a different banked-wing pose; neither is traced from the original game's plane.
+- Aircraft use four original etched LCD fighter-bomber masks: **profile level flight**, **right bank/dive**, an independently drawn **left bank/dive**, and an oblique underside **high-G climb**. All have narrow pointed noses, swept fighter wings and restrained hints of underwing stores. They are interpreted from the design-study references, not pixel-traced from generated images or the original game.
 - Player submarine retains its existing compact, slightly whimsical silhouette with tower/periscope/portholes. Enemy submarine has an offset conning tower and distinct hull profile. The surface escort has a visible bridge, mast and deck detail.
 - Six geometric etched silhouettes are drawn from deliberately shaped polygons with transparent apertures. The narrow upward dart is 12×18 px; the hollow finned torpedo is 26×8 px. No square-pixel raster texture construction for those six elements. Missiles launch **vertically upward**, fixed X at launch. Never diagonal or homing, including Dynamic mode.
 - Torpedoes move **horizontally** toward side-of-screen submarines.
 - Enemy bombs originate at aircraft; sweeper charges originate at sweepers; they fall visibly.
 - Hit effects occur **only upon real collision**, use two or three jagged pixel starburst poses.
-- Classic: stepped motion and sparse animation; simulation may still update more frequently for accurate collisions.
-- Dynamic: same assets, but velocity, altitude and timing may vary fluidly. No graphical overhaul.
+- Classic: stepped motion and one fixed pose per logical altitude change: same altitude = profile, descending = banking/dive attitude based on direction, ascending = underside climb. On a clamped altitude step, use the *actual* row change rather than the attempted delta. Simulation may still update more frequently for accurate collisions.
+- Dynamic: the same four authored attitudes chosen by climb/descent phase, while position and altitude vary fluidly. This can be enhanced with intermediate animation later.
 
 ## Authenticity and originality
 

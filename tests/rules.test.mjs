@@ -11,6 +11,7 @@ import {
 import assert from 'node:assert/strict';
 import {
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
+  planePoseForMotion,
   CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS,
   CLASSIC_TORPEDO_MOVE_TICKS,
   DYNAMIC_TORPEDO_SPEED, ENTRY_STEP_MS, torpedoUnlocked,
@@ -247,4 +248,13 @@ test('Dynamic subs rest precisely on two depths, with brief transitions', () => 
   assert.ok(dynamicSubDepthProgress(1550, 'double') < 1);
   assert.equal(dynamicSubDepthProgress(1700, 'double'), 1);
   assert.equal(dynamicSubDepthProgress(9999, 'single'), 0);
+});
+
+test('four fighter LCD attitudes are selected by actual change and travel direction', () => {
+  assert.deepEqual(planePoseForMotion(0, 1), { texture: 'plane', flipX: false });
+  assert.deepEqual(planePoseForMotion(0, -1), { texture: 'plane', flipX: true });
+  assert.deepEqual(planePoseForMotion(1, 1), { texture: 'planeBankRight', flipX: false });
+  assert.deepEqual(planePoseForMotion(1, -1), { texture: 'planeBankLeft', flipX: false });
+  assert.deepEqual(planePoseForMotion(-1, 1), { texture: 'planeClimb', flipX: false });
+  assert.deepEqual(planePoseForMotion(-1, -1), { texture: 'planeClimb', flipX: true });
 });

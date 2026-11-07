@@ -34,7 +34,9 @@ The original one-bit sprite artwork has been refined with a patrol aircraft, ban
 
 Version 0.2.9 redraws the aircraft, surface escort, enemy submarine, upward missile and torpedo as original **fixed, polygon-etched LCD segments** rather than low-resolution square-pixel sprites. The player submarine, explosions and other gameplay behaviour remain unchanged.
 
-This is version 0.2.9, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+Version 0.3.0 gives aircraft four original fixed LCD etched attitudes: compact profile level flight, independently drawn right and left bank/dive views, and an oblique underside high-G climb. Classic selects the pose from actual discrete altitude changes; Dynamic changes these attitudes during continuous altitude movement. The rest of the game art, physics, sound and score rules remain as they were.
+
+This is version 0.3.0, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

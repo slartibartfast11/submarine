@@ -4,6 +4,7 @@ import {
   CLASSIC_TORPEDO_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
   CLASSIC_ROW_Y, ENTRY_STEP_MS, COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
   advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
+  planePoseForMotion,
   torpedoUnlocked,
   stageAfter, stageGoal, stageTarget,
   type BestRun, type GameMode, type StageNumber, type StagePosition,
@@ -612,7 +613,7 @@ export class BattleScene extends Phaser.Scene {
       x: previous ? enemy.prevX : enemy.x,
       y: previous ? enemy.prevY : enemy.y,
       width: enemy.kind === 'plane' ? 76 : 72,
-      height: enemy.kind === 'plane' ? 24 : enemy.kind === 'sweeper' ? 22 : 24,
+      height: enemy.kind === 'plane' ? 38 : enemy.kind === 'sweeper' ? 22 : 24,
     };
   }
 
@@ -643,9 +644,11 @@ export class BattleScene extends Phaser.Scene {
             if (enemy.kind === 'plane') {
               const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
               const next = classicPlaneStep(enemy.x, enemy.gridRow, enemy.direction, delta);
+              const actualVertical = next.row - enemy.gridRow;
               enemy.gridRow = next.row;
               enemy.y = CLASSIC_ROW_Y[next.row];
-              enemy.image.setTexture(delta === 0 ? 'plane' : 'planeBank');
+              const pose = planePoseForMotion(actualVertical, enemy.direction);
+              enemy.image.setTexture(pose.texture).setFlipX(pose.flipX);
             }
             enemy.gridColumn += enemy.direction;
             enemy.x = PLAYER_COLUMNS[Math.max(0, Math.min(CLASSIC_COLUMNS - 1, enemy.gridColumn))] +
@@ -673,7 +676,8 @@ export class BattleScene extends Phaser.Scene {
           }
           if (action === 'fire') this.fireEnemy(enemy);
         }
-        enemy.image.setPosition(enemy.x, enemy.y).setFlipX(enemy.direction === -1);
+        enemy.image.setPosition(enemy.x, enemy.y);
+        if (enemy.kind !== 'plane') enemy.image.setFlipX(enemy.direction === -1);
         if (enemy.kind === 'sub') continue;
       } else {
         // Dynamic remains continuous; only the shared player grid changes.
@@ -681,8 +685,15 @@ export class BattleScene extends Phaser.Scene {
         if (enemy.kind !== 'sub') {
           enemy.x += enemy.direction * enemy.speed * scale * motion * dt;
           if (enemy.kind === 'plane') {
-            enemy.y = enemy.baseY + Math.sin(now * 0.0018 + enemy.phase) * 15;
-            enemy.image.setTexture(Math.cos(now * 0.0018 + enemy.phase) > 0.5 ? 'planeBank' : 'plane');
+            const angle = now * 0.0018 + enemy.phase;
+            enemy.y = enemy.baseY + Math.sin(angle) * 15;
+            // Dynamic keeps smooth position updates but shares the aircraft
+            // family. Between climb and dive it returns to level flight.
+            const riseFall = Math.cos(angle);
+            const pose = planePoseForMotion(
+              riseFall > 0.6 ? 1 : riseFall < -0.6 ? -1 : 0, enemy.direction,
+            );
+            enemy.image.setTexture(pose.texture).setFlipX(pose.flipX);
           }
           if (enemy.x < -90 || enemy.x > SCREEN.width + 90) {
             this.removeEnemy(enemy, false);
@@ -706,7 +717,8 @@ export class BattleScene extends Phaser.Scene {
           if (action === 'fire') this.fireEnemy(enemy);
           continue;
         }
-        enemy.image.setPosition(enemy.x, enemy.y).setFlipX(enemy.direction === -1);
+        enemy.image.setPosition(enemy.x, enemy.y);
+        if (enemy.kind !== 'plane') enemy.image.setFlipX(enemy.direction === -1);
       }
 
       if (now < enemy.nextShotAt || enemy.shot) continue;
