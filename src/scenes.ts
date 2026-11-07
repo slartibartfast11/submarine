@@ -94,14 +94,13 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     installSprites(this);
     drawLandscape(this);
-    addLabel(this, 320, 76, 'SUBMARINE', 57);
-    addLabel(this, 245, 149, 'AN IMAGINARY LCD GAME', 22);
+    addLabel(this, 320, 84, 'SUBMARINE', 57);
     createEtchedImage(this, 315, 354, 'player').setDisplaySize(76*1.8, 30*1.8);
     createEtchedImage(this, 650, 250, 'plane')
       .setDisplaySize(76 * 1.45, 38 * 1.45).setFlipX(true);
-    addLabel(this, 268, 392, '1  CLASSIC  -  STEPPED LCD WORLD', 21);
-    addLabel(this, 268, 426, '2  DYNAMIC  -  THE LCD COMES ALIVE', 21);
-    addLabel(this, 268, 466, 'ARROWS/WASD: MOVE     SPACE: MISSILE     X: TORPEDO', 14);
+    addLabel(this, 335, 392, '1   CLASSIC', 24);
+    addLabel(this, 335, 426, '2   MODERN', 24);
+    addLabel(this, 215, 472, 'ARROWS / WASD  MOVE     SPACE  MISSILE     X  TORPEDO', 15);
     let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
       if (event.repeat) return;
@@ -187,7 +186,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud = new LcdHud(this, this.mode);
     this.player = createEtchedImage(this, PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
-    this.gameOverHint = addLabel(this, 290, 509, 'ESC  MENU / START AGAIN', 16).setDepth(30).setVisible(false);
+    this.gameOverHint = addLabel(this, 370, 509, 'ESC  MAIN MENU', 16).setDepth(30).setVisible(false);
     this.drawHud();
     if (this.startWarp) {
       this.warpTo(this.startWarp);

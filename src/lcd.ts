@@ -65,7 +65,7 @@ export class LcdHud {
     panel.lineStyle(2, COLOURS.dark, 0.75).lineBetween(0, SCREEN.hudHeight, SCREEN.width, SCREEN.hudHeight);
     staticLabel(scene, 116, 16, 'SCORE', 17);
     staticLabel(scene, 18, 54, 'HI SCORE', 16);
-    staticLabel(scene, 804, 59, mode.toUpperCase(), 13, '#6b7d69');
+    staticLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69');
     this.gameOverField = staticLabel(scene, 710, 14, 'GAME OVER', 25, '#acb9a8');
     this.pixels = scene.add.graphics().setDepth(21);
   }

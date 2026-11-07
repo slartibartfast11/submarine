@@ -2,16 +2,25 @@
 export type CurvedEtch={readonly width:number;readonly height:number;readonly ink:readonly string[];readonly clear:readonly string[]};
 export const CURVED_ETCHES: Record<string,CurvedEtch>={
  player:{width:76,height:30,ink:[
- 'M7 18 C9 14 17 12 27 12 H58 C65 12 71 15 75 18 C72 22 66 25 58 26 H25 C15 26 9 23 7 18 Z',
- 'M31 12 L33 8 Q35 6 39 6 H46 Q49 6 50 9 L51 13 Z',
- 'M40 6 V2 H42 V6 Z',
- 'M6 17 L2 11 L3 10 L11 16 Z','M6 20 L2 27 L3 28 L12 22 Z',
- 'M7 18 H1 V20 H7 Z','M25 25 Q31 29 43 29 H50 L47 25 Z'],
- clear:['M35 9 Q39 8 42 9 V11 H35 Z',
- 'M17 17 A1.65 1.65 0 1 0 17 20.3 A1.65 1.65 0 1 0 17 17 Z',
- 'M28 17 A1.65 1.65 0 1 0 28 20.3 A1.65 1.65 0 1 0 28 17 Z',
- 'M39 17 A1.65 1.65 0 1 0 39 20.3 A1.65 1.65 0 1 0 39 17 Z',
- 'M50 17 A1.65 1.65 0 1 0 50 20.3 A1.65 1.65 0 1 0 50 17 Z']},
+ // Long pressure hull with a rounded stern at left and tapered bow at right.
+ 'M8 19 C10 15 17 13 26 13 L56 13 C65 13 71 16 75 19 C72 22 66 24 57 24 L26 24 C17 24 11 22 8 19 Z',
+ // Low, forward-biased sail with a modest integrated periscope.
+ 'M32 14 L33 9 Q35 6 39 6 L46 6 Q49 6 50 10 L50 14 Z',
+ 'M40 6 L40 3 L42 3 L42 6 Z',
+ // Tiny stern rudder, not paired airplane wings or a forked fish tail.
+ 'M9 17 L5 15 L5 12 L7 12 L12 17 Z',
+ 'M9 21 L6 25 L6 26 L8 26 L13 22 Z',
+ // A propeller shaft and compact three-bladed screw, partly behind the hull.
+ 'M8 18 L3 18 L3 20 L8 20 Z',
+ 'M3 19 C0 16 1 14 3 15 C5 17 5 21 3 23 C1 24 0 22 3 19 Z',
+ ],
+ clear:[
+ 'M36 10 Q39 8.5 43 9 L45 10.5 L36 11 Z',
+ 'M20 17 A1.5 1.5 0 1 0 20 20 A1.5 1.5 0 1 0 20 17 Z',
+ 'M30 17 A1.5 1.5 0 1 0 30 20 A1.5 1.5 0 1 0 30 17 Z',
+ 'M40 17 A1.5 1.5 0 1 0 40 20 A1.5 1.5 0 1 0 40 17 Z',
+ 'M50 17 A1.5 1.5 0 1 0 50 20 A1.5 1.5 0 1 0 50 17 Z',
+ ]},
  enemySub:{width:72,height:24,ink:[
  'M4 15 Q8 10 17 10 H56 Q67 10 71 15 Q65 20 53 21 H15 Q7 20 4 15 Z',
  'M19 11 L22 7 Q23 5 27 5 H35 Q38 5 39 10 Z',
@@ -21,10 +30,25 @@ export const CURVED_ETCHES: Record<string,CurvedEtch>={
  'M41 14 A1.5 1.5 0 1 0 41 17 A1.5 1.5 0 1 0 41 14 Z',
  'M53 14 A1.5 1.5 0 1 0 53 17 A1.5 1.5 0 1 0 53 14 Z']},
  sweeper:{width:72,height:22,ink:[
- 'M2 13 Q8 12 15 12 H67 L71 14 Q64 21 51 21 H17 Q7 20 2 13 Z',
- 'M18 12 V7 H25 V5 H42 L48 11 V13 Z','M29 5 V1 H30 V5 Z',
- 'M50 12 V8 H55 V12 Z','M14 12 V10 H16 V12 Z','M61 12 V10 H64 V12 Z'],
- clear:['M24 8 H27 V10 H24 Z','M30 8 H33 V10 H30 Z','M36 8 H39 V10 H36 Z',
- 'M9 15 Q24 16 42 16 H65 L62 17 H15 Z']},
+ // Naval displacement hull, deeper at the bow and with a definite stern.
+ 'M2 13 L12 12 L59 12 L70 13 L67 17 L61 21 L18 21 L9 19 Z',
+ // Raised forecastle, low quarterdeck and purposeful deck layout.
+ 'M42 12 L42 10 L58 10 L61 12 Z',
+ 'M14 12 L14 10 L23 10 L23 12 Z',
+ // Stepped bridge, mast and a small funnel: unmistakable escort vessel.
+ 'M22 12 L22 8 L28 8 L29 4 L43 4 L47 8 L47 12 Z',
+ 'M31 4 L31 0 L32.5 0 L32.5 4 Z',
+ 'M39 4 L39 1 L42 1 L42 4 Z',
+ 'M49 12 L49 7 L53 7 L55 12 Z',
+ // Bow gun forward, compact stern depth-charge rack.
+ 'M59 12 L59 9 L66 9 L66 10 L61 11 L61 12 Z',
+ 'M8 12 L8 9 L12 9 L12 12 Z',
+ ],
+ clear:[
+ 'M26 8 L29 8 L29 10 L26 10 Z',
+ 'M32 7 L35 7 L35 10 L32 10 Z',
+ 'M38 7 L41 7 L41 10 L38 10 Z',
+ 'M16 17 L57 17 L54 18 L19 18 Z',
+ ]},
  bomb:{width:12,height:12,ink:['M6 1 C9 1 11 4 11 7 C11 10 9 12 6 12 C3 12 1 10 1 7 C1 4 3 1 6 1 Z','M5 0 H7 V2 H5 Z'],clear:[]}
 };

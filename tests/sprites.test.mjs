@@ -59,3 +59,13 @@ test('etched silhouettes maintain distinct aircraft, ship and submarine bounds',
   assert.deepEqual([CURVED_ETCHES.sweeper.width, CURVED_ETCHES.sweeper.height], [72, 22]);
   assert.deepEqual([CURVED_ETCHES.enemySub.width, CURVED_ETCHES.enemySub.height], [72, 24]);
 });
+
+test('ship silhouettes stay fixed size and have proper naval details', () => {
+  const player = CURVED_ETCHES.player;
+  const escort = CURVED_ETCHES.sweeper;
+  assert.deepEqual([player.width, player.height], [76, 30]);
+  assert.deepEqual([escort.width, escort.height], [72, 22]);
+  assert.ok(player.clear.length >= 4); // readable portholes
+  assert.ok(escort.ink.length >= 6); // superstructure, mast, deck and gun
+  assert.ok(escort.clear.length >= 3); // bridge apertures
+});
