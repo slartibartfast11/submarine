@@ -48,6 +48,10 @@ Changes to `main` are built and deployed to GitHub Pages by GitHub Actions.
 
 **This is an AI-coded game.** The human designer supplied the game ideas, gameplay rules and logic, and art direction, and reviewed the iterations. AI generated the game code and in-game digital artwork under that direction.
 
+### How it was built
+
+The designer specified the rules, gameplay behaviour and art direction, using screenshots and footage of Casio's *Submarine Battle* as references. AI produced code and artwork for each revision; the designer played the game, compared its behaviour and appearance with the reference, and directed corrections. Automated tests and builds checked the implementation alongside that hands-on playtesting.
+
 This is an independent, non-commercial project inspired by *Submarine Battle* by Casio. It is not affiliated with or endorsed by Casio. No original Casio game artwork or audio is included.
 
 ## Licence
