@@ -24,7 +24,7 @@ Stages progress from aircraft (1-1), to surface ships (1-2), then enemy submarin
 
 **Testing:** type `G13`, `G23` or `G33` at the menu or during gameplay to jump to a submarine stage. `G21` and `G31` select later aircraft stages. Warps are disabled after game over.
 
-See [gameplay rules](docs/gameplay-rules.md) for detailed mechanics and [visual design](docs/visual-design.md) for rendering specifications.
+Read [how to play](docs/gameplay-rules.md) for the rules, [the gameplay manifest](docs/manifest.md) for implementation constraints, and [visual design](docs/visual-design.md) for rendering specifications.
 
 ## Development
 

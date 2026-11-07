@@ -1,5 +1,7 @@
 # Visual design and rendering
 
+For gameplay invariants and implementation ownership, see [the gameplay manifest](manifest.md).
+
 ## Display
 
 - Logical resolution: **960 × 540** (see `SCREEN` in `src/config.ts`), scaled to fit the browser viewport.

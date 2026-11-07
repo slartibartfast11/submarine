@@ -1,0 +1,92 @@
+# Submarine — gameplay and implementation manifest
+
+**Audience:** maintainers and AI coding agents. This file records the current implemented game contract, not a development diary or player instructions.
+
+For the player-facing rules, see [How to play](gameplay-rules.md). For rendering and sprite specifications, see [Visual design](visual-design.md). Where this document and the executable code disagree, inspect the code and tests before changing either; do not assume an undocumented difference is a defect.
+
+## Core game contract
+
+- **Two modes, one ruleset:** UI **Classic** corresponds to internal mode `classic`; UI **Modern** corresponds to internal mode `dynamic`. Both use the same player controls, six horizontal positions, two underwater depths, stage objectives, scoring and lives. Modern does **not** grant free two-dimensional player movement.
+- **Player movement:** left/right selects one of six columns and updates the last horizontal facing direction; up/down selects one of two depths. The submarine cannot move beyond these positions.
+- **Weapons:** `Space` launches a strictly vertical missile; `X` launches a horizontal torpedo. One of each may exist simultaneously, but a second of the same kind cannot launch until its previous shot is destroyed or leaves play. Torpedoes unlock at stage **1-3** and remain available in later cycles.
+- **Targets:** player missiles can destroy aircraft and surface escorts, not enemy submarines. Player torpedoes can destroy enemy submarines, not aircraft or surface escorts.
+- **Defence:** missiles can intercept falling bombs and depth charges. Friendly and enemy torpedoes can intercept each other at the same underwater depth. Enemy projectiles are not automatically destroyed when their launcher is removed.
+- **Enemy projectiles:** aircraft release bombs, surface escorts release depth charges, and enemy submarines fire horizontal torpedoes. The player's submarine is damaged by enemy projectiles; projectile hits and enemy kills use the collision rules below.
+- **Stage progression:** a stage advances only when enough enemies of its designated kind are destroyed. Other kills still score points. Survival time alone never advances a stage.
+- **Lives:** a run starts with three submarines. Each loss records another X. A surviving replacement re-enters at the lower depth and resets the current stage's kill count, preserving score and remaining lives. The final loss freezes gameplay; only `Esc` returns to the menu. Gameplay keys do not restart a finished run.
+- **High score:** kept for this browser page's lifetime in module memory, not persisted to browser storage.
+
+Implementation: [`src/scenes.ts`](../src/scenes.ts), [`src/config.ts`](../src/config.ts), [`src/lcd.ts`](../src/lcd.ts).
+
+## Stages and scoring
+
+| Stage | Enemies present | Required target | Cycle 1 goal |
+| --- | --- | --- | ---: |
+| 1 | Aircraft | Aircraft | 8 |
+| 2 | Aircraft and surface escorts | Surface escort | 4 |
+| 3 | Aircraft, surface escorts and enemy submarines | Enemy submarine | 4 |
+
+- A cycle contains stages 1, 2 and 3. Completing stage 3 starts stage 1 of the next cycle.
+- For cycle `c` (starting at 1), stage 1 requires `8 + 2 × (c - 1)` kills; stages 2 and 3 require `4 + (c - 1)`.
+- Kill scores: aircraft **100**, surface escort **150**, enemy submarine **200**.
+- Difficulty accelerates through `speedScale(c) = min(2.5, 1 + 0.14 × (c - 1))`.
+
+Implementation: `stageTarget`, `stageGoal`, `stageAfter`, `speedScale` in [`src/config.ts`](../src/config.ts); `removeEnemy` and `stepSimulation` in [`src/scenes.ts`](../src/scenes.ts).
+
+## Classic: fixed-grid simulation
+
+- **Geometry:** six whole columns × six rows, comprising three aircraft rows, one surface row and two submarine-depth rows. Projectiles use twelve half-columns × twelve half-rows. Sprite drawing positions are separate from this collision grid.
+- **Clock:** one shared simulation clock. Base interval **145 ms** divided by the cycle speed scale. Aircraft move to the next column every **four** ticks; surface escorts every **eight** ticks; torpedoes move one half-column every **two** ticks. Missiles and downward projectiles step through half-rows. A transition resets the tick accumulator; no residual ticks from the old stage are processed.
+- **Aircraft:** horizontal travel never reverses. Each aircraft step selects an attempted altitude change of −1, 0 or +1 row, clamped to the three sky rows. Choose the image pose from the **actual** row change, so a move blocked by the top or bottom row is displayed level. The four textures are `plane`, `planeBankRight`, `planeBankLeft` and `planeClimb`.
+- **Bombs:** reconnaissance flights do not fire (spawn chance **30%**). Other aircraft can have **up to two** active bombs. Each bomb receives a fixed `straight`, `diagonal` or `water-hook` path at launch. Diagonal paths drift one half-column every two downward steps; the water-hook does not begin lateral movement before entering the surface row. Bombs are not homing.
+- **Surface escorts:** move more slowly than aircraft and allow only one active depth charge per escort.
+- **Enemy submarines:** at most one is visible at once. An appearance is assigned a `decoy`, `single`, `dive` or `double` pattern. A decoy does not fire; other patterns can fire, change depth or fire again according to the pattern's tick schedule. A double attack is **not** blocked by the first torpedo remaining in flight. Vanishing is not counted as a kill, and torpedoes already fired continue.
+- **Player missile:** launches vertically from the fore or aft half of the submarine's cell according to its last horizontal facing. It has no lateral steering or homing.
+- **Player torpedo:** automatically selects the horizontal direction of a visible enemy submarine. When no enemy sub is visible (or the target is in the same column), it uses the player's last horizontal facing.
+- **Classic hit tests:** a shot hits a full-cell target if it occupies either half of the target cell. Missile/bomb and missile/charge interception permits the same or an immediately adjacent half-column, with crossing checks between successive tick snapshots. Opposing torpedoes can meet or cross at the same depth.
+- **Adjacent-bomb interception exception:** an upward missile can destroy a diagonal bomb originating from a neighbouring whole column when the bomb's **already determined path** threatens the submarine's current depth. Eligibility is evaluated at launch using a local forecast (up to three ticks), not a global search or a homing trajectory. This is a distinct defensive rule; it must not widen ordinary missile hitboxes.
+
+Implementation: [`src/classic-grid.ts`](../src/classic-grid.ts), `planePoseForMotion` in [`src/config.ts`](../src/config.ts), `BattleScene` in [`src/scenes.ts`](../src/scenes.ts).
+
+## Modern: continuous enemy simulation
+
+- The player still occupies the **same six columns and two depths** as Classic. Enemies and shots update continuously between frames; elapsed frame delta is capped before simulation.
+- Aircraft advance horizontally with variable speed and change altitude smoothly, selecting level, bank/dive or climb silhouettes from the vertical-motion phase.
+- Surface escorts travel continuously; aircraft bombs and escort charges fall with a small horizontal drift.
+- Enemy submarines appear at the screen edges, hold one of the two depth rows, and may transition smoothly to the other row on the applicable attack pattern. Only one enemy submarine is visible at once.
+- Player torpedoes travel in the **last facing direction**, even when an enemy submarine is visible.
+- Moving rectangular hitboxes are checked over their travelled paths (`sweptBoxesOverlap`), not by testing pixels or only the endpoints.
+
+Implementation: `BattleScene.updateEnemies`, `BattleScene.updateShots` and `BattleScene.intersects` in [`src/scenes.ts`](../src/scenes.ts), and [`src/collision.ts`](../src/collision.ts).
+
+## Entry sequence, warps and terminal states
+
+- Entry is a non-interactive sequence at the lower depth: **zero-based columns 4 → 3 → 2**, with **2.1 seconds** between positions and a short oscillator chirp at each position. Simulation starts when entry ends.
+- Each player hit enters an explosion state. With remaining lives, the current stage restarts at the same cycle/stage with a fresh target count; with no lives, the scene becomes `gameOver` and stops updating.
+- Stage warp syntax: `G` + single-digit cycle + single-digit stage (1–3), e.g. `G13`, `G23`, `G31`. At the menu, warps start Classic directly; during a run, they preserve score and lives, clear projectiles and enemies, and reset stage progress. Warps are not available while exploding or after game over.
+- Escape returns to the menu from a run, including after game over.
+
+Implementation: `beginEntry`, `warpTo`, `hitPlayer` in [`src/scenes.ts`](../src/scenes.ts), `advanceWarpCode` in [`src/config.ts`](../src/config.ts).
+
+## Tunables versus invariants
+
+**Gameplay invariants** include the stage target kinds, weapon compatibility and independent lockouts, submarine position grid, projectile direction constraints, collision exceptions, stage completion by kills, and the rule that a ship's fired shots remain active after its destruction.
+
+**Tunable values** include spawn timing, enemy speeds and maximum simultaneous enemy counts, reconnaissance and attack-pattern probabilities, base clock interval, score awards, goals per cycle, missile/torpedo speeds, collision dimensions, and individual attack delays. Their **current values** live in source code, not in this manifest as an alternate configuration file. When changing a tunable, check whether tests or user-facing rules need updating.
+
+## Source and test map
+
+| Concern | Source | Tests |
+| --- | --- | --- |
+| Stages, weapon unlocks, aircraft pose selection, warps | `src/config.ts` | `tests/rules.test.mjs` |
+| Classic grid, shot movement, attack patterns, interception exceptions | `src/classic-grid.ts` | `tests/rules.test.mjs` |
+| Swept collision and logical boxes | `src/collision.ts` | `tests/collision.test.mjs` |
+| Sprites and texture geometry | `src/curved-art.ts`, `src/lcd-segments.ts`, `src/sprites.ts` | `tests/sprites.test.mjs` |
+| Scene transitions, spawns, scoring, HUD and keyboard input | `src/scenes.ts`, `src/lcd.ts` | Primarily integration behaviour; not all paths have automated tests |
+
+## Maintenance contract
+
+1. **Protect behaviour:** before changing a rule, identify the existing implementation and tests. Avoid silently replacing a deliberate rule with one that merely seems more realistic.
+2. **Keep documentation audience-specific:** `docs/gameplay-rules.md` describes what players do and observe; this manifest documents technical behaviour and decisions; `docs/visual-design.md` documents artwork and rendering.
+3. **Keep specs current:** when behaviour changes intentionally, update the affected tests, this manifest and the player guide where relevant. Do not leave stale versioned descriptions or historical design discussions in code comments.
+4. **Check the build:** run `npm test` and `npm run build`. Successful tests do not substitute for a browser playtest of the visual result.
