@@ -2,14 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#d5dac8" />
     <meta name="description" content="Submarine, a browser game inspired by Casio's Submarine Battle." />
     <title>Submarine</title>
   </head>
   <body>
     <main>
-      <div id="game" aria-label="Submarine browser game"></div>
+      <div class="game-row" id="touch-controls" data-screen="menu">
+        <nav class="touch-dpad" aria-label="Submarine movement">
+          <button class="touch-key up" data-control="up" type="button" aria-label="Move up">▲</button>
+          <button class="touch-key left" data-control="left" type="button" aria-label="Move left">◀</button>
+          <button class="touch-key right" data-control="right" type="button" aria-label="Move right">▶</button>
+          <button class="touch-key down" data-control="down" type="button" aria-label="Move down">▼</button>
+        </nav>
+        <div id="game" aria-label="Submarine browser game"></div>
+        <nav class="touch-side" aria-label="Submarine game controls">
+          <div class="touch-start">
+            <button class="touch-key start-key" data-control="classic" type="button">CLASSIC</button>
+            <button class="touch-key start-key" data-control="modern" type="button">MODERN</button>
+          </div>
+          <div class="touch-actions">
+            <button class="touch-key weapon-key" data-control="missile" type="button">MISSILE</button>
+            <button class="touch-key weapon-key" data-control="torpedo" type="button">TORPEDO</button>
+            <button class="touch-key menu-key" data-control="menu" type="button">MENU</button>
+          </div>
+        </nav>
+      </div>
+      <p class="rotate-hint">Rotate your phone for a larger playfield.</p>
       <p class="footnote">Original artwork and rules inspired by Submarine Battle by Casio.</p>
     </main>
     <script type="module" src="/src/main.ts"></script>

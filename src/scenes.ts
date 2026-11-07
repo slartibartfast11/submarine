@@ -15,6 +15,9 @@ import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
 import { addLabel } from './labels';
 import {
+  keyToControl, setControlScreen, subscribeControls, type GameControl,
+} from './controls';
+import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
   classicHalfRowY, classicHalfHitsCell, classicMissileBombContact,
@@ -84,14 +87,17 @@ export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
 
   create(): void {
+    setControlScreen('menu');
     installSprites(this);
     drawLandscape(this);
     addLabel(this, 320, 84, 'SUBMARINE', 57);
     createEtchedImage(this, 315, 354, 'player').setDisplaySize(76*1.8, 30*1.8);
     createEtchedImage(this, 650, 250, 'plane')
       .setDisplaySize(76 * 1.45, 38 * 1.45).setFlipX(true);
-    addLabel(this, 335, 392, '1   CLASSIC', 24);
-    addLabel(this, 335, 426, '2   MODERN', 24);
+    addLabel(this, 335, 392, '1   CLASSIC', 24)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('classic'));
+    addLabel(this, 335, 426, '2   MODERN', 24)
+      .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('modern'));
     addLabel(this, 215, 472, 'ARROWS / WASD  MOVE     SPACE  MISSILE     X  TORPEDO', 15);
     let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
@@ -104,11 +110,21 @@ export class MenuScene extends Phaser.Scene {
         return;
       }
       if (warpSequence) return;
-      if (event.code === 'Digit1' || event.code === 'Numpad1') this.scene.start('battle', { mode: 'classic' });
-      if (event.code === 'Digit2' || event.code === 'Numpad2') this.scene.start('battle', { mode: 'dynamic' });
+      const control = keyToControl(event.code);
+      if (control === 'classic' || control === 'modern') this.startMode(control);
     };
+    const stopTouch = subscribeControls(control => {
+      if (control === 'classic' || control === 'modern') this.startMode(control);
+    });
     this.input.keyboard?.on('keydown', onKey);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.off('keydown', onKey));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown', onKey);
+      stopTouch();
+    });
+  }
+
+  private startMode(control: 'classic' | 'modern'): void {
+    this.scene.start('battle', { mode: control === 'classic' ? 'classic' : 'dynamic' });
   }
 }
 
@@ -168,6 +184,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
+    setControlScreen('battle');
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
     this.hud = new LcdHud(this, this.mode);
@@ -183,36 +200,51 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const onKey = (event: KeyboardEvent): void => {
-      const key = event.code;
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(key)) event.preventDefault();
-      if (key === 'Escape') { this.scene.start('menu'); return; }
-      // Warp codes can also be entered during the slow opening animation.
-      // Never permit them after the final loss (no implicit restart).
+      const control = keyToControl(event.code);
+      if (control && ['left', 'right', 'up', 'down', 'missile'].includes(control)) {
+        event.preventDefault();
+      }
+      if (control === 'menu') { this.handleControl('menu', event.repeat); return; }
+
+      // Stage warps are keyboard-only and may be entered during submarine entry.
       if (!event.repeat && (this.state === 'entering' || this.state === 'playing')) {
-        const warp = advanceWarpCode(this.warpSequence, key);
+        const warp = advanceWarpCode(this.warpSequence, event.code);
         this.warpSequence = warp.sequence;
         if (warp.target) { this.warpTo(warp.target); return; }
         if (this.warpSequence) return;
       }
-      // Gameplay input does not restart a game-over run.
-      if (this.state !== 'playing') return;
-      if (key === 'ArrowLeft' || key === 'KeyA') {
-        this.columns = Math.max(0, this.columns - 1);
-        this.facing = -1;
-      }
-      if (key === 'ArrowRight' || key === 'KeyD') {
-        this.columns = Math.min(PLAYER_COLUMNS.length - 1, this.columns + 1);
-        this.facing = 1;
-      }
-      if (key === 'ArrowUp' || key === 'KeyW') this.depth = 0;
-      if (key === 'ArrowDown' || key === 'KeyS') this.depth = 1;
-      if (key === 'Space' && !event.repeat) this.firePlayerMissile();
-      if (key === 'KeyX' && !event.repeat) this.firePlayerTorpedo();
-      this.player.setPosition(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth]);
-      this.player.setFlipX(this.facing === -1);
+      if (control) this.handleControl(control, event.repeat);
     };
+    const stopTouch = subscribeControls((control, repeated) => this.handleControl(control, repeated));
     this.input.keyboard?.on('keydown', onKey);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.keyboard?.off('keydown', onKey));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown', onKey);
+      stopTouch();
+    });
+  }
+
+  private handleControl(control: GameControl, repeated = false): void {
+    if (control === 'menu') { this.scene.start('menu'); return; }
+    if (this.state !== 'playing') return;
+    if (control === 'left') {
+      this.columns = Math.max(0, this.columns - 1);
+      this.facing = -1;
+    } else if (control === 'right') {
+      this.columns = Math.min(PLAYER_COLUMNS.length - 1, this.columns + 1);
+      this.facing = 1;
+    } else if (control === 'up') {
+      this.depth = 0;
+    } else if (control === 'down') {
+      this.depth = 1;
+    } else if (control === 'missile' && !repeated) {
+      this.firePlayerMissile();
+    } else if (control === 'torpedo' && !repeated) {
+      this.firePlayerTorpedo();
+    } else {
+      return;
+    }
+    this.player.setPosition(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth]);
+    this.player.setFlipX(this.facing === -1);
   }
 
   private drawHud(): void {

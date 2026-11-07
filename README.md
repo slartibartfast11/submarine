@@ -16,6 +16,8 @@ Defend your submarine against aircraft, surface ships and enemy submarines. Use 
 | `X` | Fire a torpedo (unlocks at stage 1-3) |
 | `Esc` | Main menu |
 
+On phones and tablets, use the on-screen direction pad and weapon buttons; tap **Classic** or **Modern** to start. Hold left or right to move through multiple columns. Landscape orientation gives the largest playfield. Keyboard controls remain available on devices with a keyboard.
+
 One missile and one torpedo can be in flight simultaneously. Each weapon has a separate lockout until its previous shot resolves.
 
 **Classic** uses fixed grid positions, discrete movement ticks and fixed aircraft attitudes. **Modern** uses continuous enemy movement and smooth altitude changes. Both modes use the same controls and stage progression.

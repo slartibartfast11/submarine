@@ -11,6 +11,8 @@
 | `X` | Fire a torpedo, once unlocked |
 | `Esc` | Return to the main menu |
 
+On touchscreens, use the on-screen direction pad, **MISSILE**, **TORPEDO** and **MENU** buttons. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
+
 Your submarine moves between **six positions** across the screen and **two depths** underwater.
 
 ## Weapons and enemies

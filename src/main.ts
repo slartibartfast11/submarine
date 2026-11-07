@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { BattleScene, MenuScene } from './scenes';
 import { COLOURS, SCREEN } from './config';
 import './style.css';
+import { installTouchControls } from './touch-controls';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: SCREEN.width,
@@ -14,3 +15,13 @@ new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [MenuScene, BattleScene],
 });
+
+const touchRoot = document.getElementById('touch-controls');
+if (touchRoot) {
+  installTouchControls(touchRoot, () => {
+    const webAudio = game.sound as Phaser.Sound.WebAudioSoundManager;
+    if (webAudio.context?.state === 'suspended') {
+      void webAudio.context.resume().catch(() => {});
+    }
+  });
+}

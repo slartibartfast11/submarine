@@ -7,6 +7,7 @@ For the player-facing rules, see [How to play](gameplay-rules.md). For rendering
 ## Core game contract
 
 - **Two modes, one ruleset:** UI **Classic** corresponds to internal mode `classic`; UI **Modern** corresponds to internal mode `dynamic`. Both use the same player controls, six horizontal positions, two underwater depths, stage objectives, scoring and lives. Modern does **not** grant free two-dimensional player movement.
+- **Input:** keyboard and touchscreen buttons use the same scene action handler. On touch devices, direction, fire, menu and mode-selection commands are exposed as DOM buttons outside the game canvas. Touch left/right repeats after a short hold; weapon actions fire once per press. Keyboard input, including the debug warp sequence, remains supported. Menu choices are also tappable in the canvas. Game actions are ignored during entry and after game over, except for returning to the menu.
 - **Player movement:** left/right selects one of six columns and updates the last horizontal facing direction; up/down selects one of two depths. The submarine cannot move beyond these positions.
 - **Weapons:** `Space` launches a strictly vertical missile; `X` launches a horizontal torpedo. One of each may exist simultaneously, but a second of the same kind cannot launch until its previous shot is destroyed or leaves play. Torpedoes unlock at stage **1-3** and remain available in later cycles.
 - **Targets:** player missiles can destroy aircraft and surface escorts, not enemy submarines. Player torpedoes can destroy enemy submarines, not aircraft or surface escorts.
@@ -73,6 +74,14 @@ Implementation: `beginEntry`, `warpTo`, `hitPlayer` in [`src/scenes.ts`](../src/
 **Gameplay invariants** include the stage target kinds, weapon compatibility and independent lockouts, submarine position grid, projectile direction constraints, collision exceptions, stage completion by kills, and the rule that a ship's fired shots remain active after its destruction.
 
 **Tunable values** include spawn timing, enemy speeds and maximum simultaneous enemy counts, reconnaissance and attack-pattern probabilities, base clock interval, score awards, goals per cycle, missile/torpedo speeds, collision dimensions, and individual attack delays. Their **current values** live in source code, not in this manifest as an alternate configuration file. When changing a tunable, check whether tests or user-facing rules need updating.
+
+## Touch layout and lifecycle
+
+- `src/controls.ts` maps keyboard codes to semantic actions and sends touchscreen actions to the currently active scene. Scene listeners are removed on scene shutdown.
+- `src/touch-controls.ts` handles pointer presses, independent multi-touch pointers, repeat timers for horizontal movement, and cleanup on cancellation, lost capture, visibility change and scene switch.
+- `index.html` and `src/style.css` provide buttons outside the scaled Phaser canvas. In portrait, controls sit below the playfield; in landscape, they sit beside it. CSS only shows touch controls on coarse-pointer devices; physical keyboard play remains available.
+- A touch press attempts to resume the WebAudio context inside the user's gesture, as HTML controls do not automatically trigger Phaser canvas input.
+- Mobile controls must not introduce new weapon availability, extra projectile slots, altered collision semantics or different player movement rules.
 
 ## Source and test map
 

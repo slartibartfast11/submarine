@@ -1,7 +1,124 @@
-:root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; background: #c1c8b8; color: #2b3b32; }
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #c1c8b8;
+  color: #2b3b32;
+}
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; }
 main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
-#game { width: 100%; border: 10px solid #4c594c; border-radius: 10px; overflow: hidden; background: #d5dac8; box-shadow: 0 5px 0 #869487; }
+.game-row { display: flex; align-items: center; justify-content: center; }
+#game {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-width: 0;
+  border: 10px solid #4c594c;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #d5dac8;
+  box-shadow: 0 5px 0 #869487;
+}
 #game canvas { display: block; image-rendering: auto; }
 .footnote { font-size: 11px; letter-spacing: .02em; text-align: center; margin: 14px 0 0; }
+.touch-dpad, .touch-side, .rotate-hint { display: none; }
+
+@media (any-pointer: coarse) {
+  :root { --pad-button: clamp(44px, 8.5dvh, 60px); }
+  body { min-height: 100dvh; }
+  main {
+    width: 100%;
+    max-width: 1100px;
+    padding: max(5px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(5px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .game-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "screen screen" "movement actions";
+    align-items: center;
+    justify-items: center;
+    gap: 10px 8px;
+  }
+  .game-row[data-screen="menu"] {
+    grid-template-areas: "screen screen" "actions actions";
+  }
+  #game {
+    grid-area: screen;
+    width: 100%;
+    max-width: 960px;
+    border-width: 5px;
+    border-radius: 8px;
+  }
+  .touch-dpad {
+    grid-area: movement;
+    display: grid;
+    grid-template-columns: repeat(3, var(--pad-button));
+    grid-template-rows: repeat(3, var(--pad-button));
+    gap: 3px;
+    justify-content: center;
+    align-content: center;
+  }
+  .touch-side {
+    grid-area: actions;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  .touch-start, .touch-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 7px; }
+  .game-row[data-screen="menu"] .touch-dpad,
+  .game-row[data-screen="menu"] .touch-actions,
+  .game-row[data-screen="battle"] .touch-start { display: none; }
+  .touch-actions { flex-direction: column; }
+  .touch-key {
+    appearance: none;
+    border: 2px solid #52634e;
+    border-radius: 12px;
+    background: #dee4d6;
+    color: #26372d;
+    font: 700 13px/1 Arial, Helvetica, sans-serif;
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .touch-key:active, .touch-key.is-held {
+    background: #52634e;
+    border-color: #26372d;
+    color: #fff;
+  }
+  .touch-key:focus-visible { outline: 3px solid #26372d; outline-offset: 2px; }
+  .touch-dpad .touch-key { width: var(--pad-button); height: var(--pad-button); font-size: 22px; }
+  .touch-dpad .up { grid-column: 2; grid-row: 1; }
+  .touch-dpad .left { grid-column: 1; grid-row: 2; }
+  .touch-dpad .right { grid-column: 3; grid-row: 2; }
+  .touch-dpad .down { grid-column: 2; grid-row: 3; }
+  .touch-side .touch-key { min-width: 100px; padding: 10px 14px; }
+  .touch-actions .weapon-key { background: #b4c4a9; min-height: 52px; }
+  .touch-actions .menu-key { font-size: 11px; min-height: 44px; }
+  .touch-start .start-key { min-height: 56px; min-width: 122px; }
+  .rotate-hint { display: block; margin: 12px 0 0; text-align: center; font-size: 12px; }
+  .footnote { margin-top: 8px; font-size: 10px; }
+}
+
+@media (any-pointer: coarse) and (orientation: landscape) {
+  .game-row, .game-row[data-screen="menu"] {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "movement screen actions";
+    gap: 6px;
+  }
+  .game-row[data-screen="menu"] {
+    grid-template-areas: "screen screen actions";
+  }
+  #game {
+    width: 100%;
+    max-width: calc((100dvh - 20px) * 16 / 9);
+  }
+  .touch-side { width: clamp(94px, 15vw, 135px); }
+  .touch-side .touch-key { min-width: 0; width: 100%; padding: 8px 4px; }
+  .touch-start, .touch-actions { width: 100%; flex-direction: column; }
+  .rotate-hint, .footnote { display: none; }
+}
