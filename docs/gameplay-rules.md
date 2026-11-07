@@ -17,6 +17,7 @@ Your submarine moves between **six positions** across the screen and **two depth
 
 ## Weapons and enemies
 
+- **Bombs** that fall straight down use the round symbol. Angling bombs use a filled torpedo-shaped symbol so their different path is easier to recognise; they do not home in on the submarine.
 - **Missiles** fire straight up. They destroy aircraft and surface ships, and can shoot down falling bombs and depth charges.
 - **Torpedoes** travel sideways and destroy enemy submarines. They become available at stage **1-3** and can also intercept enemy torpedoes.
 - You can have **one missile and one torpedo in flight at once**. Each must finish its journey before you can fire another of the same kind.

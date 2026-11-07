@@ -89,6 +89,15 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[5,7],[6,7],[6,13],[5,13]],
     ],
   },
+  // Filled torpedo-style mask for bombs with a lateral trajectory.
+  angledBomb: {
+    width: 18, height: 12,
+    ink: [
+      [[3,3],[12,3],[15,4],[17,6],[15,8],[12,9],[3,9]],
+      [[4,5],[0,0],[0,3],[2,6],[0,9],[0,12],[5,7]],
+    ],
+    clear: [],
+  },
   // Hollow torpedo mask with tail fins and pointed nose.
   torpedo: {
     width: 26, height: 8,

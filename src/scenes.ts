@@ -13,6 +13,7 @@ import { installSprites, createEtchedImage } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
+import { droppedBombAppearance } from './drop-appearance';
 import { addLabel } from './labels';
 import {
   keyToControl, setControlScreen, subscribeControls, type GameControl,
@@ -493,6 +494,14 @@ export class BattleScene extends Phaser.Scene {
     this.lastLaunchTime = this.elapsed * 1000;
   }
 
+  private setBombAppearance(shot: Shot, flight: ClassicBombFlight | null, lateralSpeed: number): void {
+    if (shot.kind !== 'bomb') return;
+    const appearance = droppedBombAppearance(flight, lateralSpeed);
+    shot.image.setTexture(appearance.texture)
+      .setDisplaySize(appearance.texture === 'angledBomb' ? 18 : 12, 12)
+      .setAngle(appearance.angle);
+  }
+
   private fireEnemy(enemy: Enemy): void {
     if (this.mode === 'classic' && enemy.kind === 'plane') {
       if (!classicPlaneCanRelease(enemy.reconnaissance, enemy.activeBombs)) return;
@@ -510,6 +519,7 @@ export class BattleScene extends Phaser.Scene {
       if (enemy.kind === 'plane') {
         shot.bombFlight = classicBombFlight(Math.random());
         shot.driftDirection = Math.random() < 0.5 ? -1 : 1;
+        this.setBombAppearance(shot, shot.bombFlight, shot.driftDirection);
       }
       if (enemy.kind === 'sub') enemy.shotsFired++;
     } else {
@@ -528,7 +538,8 @@ export class BattleScene extends Phaser.Scene {
         vy = 109 * cycleScale;
         vx = (Math.random() - 0.5) * 24;
       }
-      this.addShot(kind, x, y, vx, vy, enemy);
+      const shot = this.addShot(kind, x, y, vx, vy, enemy);
+      this.setBombAppearance(shot, null, vx);
     }
     enemy.nextShotAt = this.mode === 'classic' && enemy.kind === 'plane'
       ? this.elapsed * 1000 + (5 + Math.floor(Math.random() * 5)) * classicTickMs(this.cycle)

@@ -29,6 +29,7 @@ test('only the impact starburst retains a 1-bit mask', () => {
 
 test('polygon etches have valid bounds', () => {
   assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
+    'angledBomb',
     'missile',
     'plane',
     'planeBankLeft',
