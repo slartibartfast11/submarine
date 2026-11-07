@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SPRITE_MASKS } from '../src/sprite-masks.ts';
 import { LCD_SEGMENTS } from '../src/lcd-segments.ts';
+import { CURVED_ETCHES } from '../src/curved-art.ts';
 
-test('retained bitmap masks are well-formed, with the player untouched', () => {
-  assert.deepEqual(Object.keys(SPRITE_MASKS).sort(), ['bomb', 'player', 'star']);
+test('only the impact starburst retains a 1-bit mask', () => {
+  assert.deepEqual(Object.keys(SPRITE_MASKS).sort(), ['star']);
   for (const [name, mask] of Object.entries(SPRITE_MASKS)) {
     assert.ok(mask.length > 0, name);
     assert.ok(mask[0].length > 0, name);
@@ -14,14 +15,19 @@ test('retained bitmap masks are well-formed, with the player untouched', () => {
     }
     assert.ok(mask.some(row => row.includes('X')), name);
   }
-  assert.equal(SPRITE_MASKS.player.length, 13);
-  assert.equal(SPRITE_MASKS.player[0].length, 38);
+  assert.deepEqual(Object.keys(CURVED_ETCHES).sort(), ['bomb','enemySub','player','sweeper']);
+  for (const [name,etch] of Object.entries(CURVED_ETCHES)) {
+    assert.ok(etch.width>0 && etch.height>0,name);
+    assert.ok(etch.ink.length>0,name);
+    for(const p of [...etch.ink,...etch.clear]) assert.ok(p.startsWith('M'),name);
+  }
+  assert.deepEqual([CURVED_ETCHES.player.width,CURVED_ETCHES.player.height],[76,30]);
 });
 
 test('six revised silhouettes use deliberate etch polygons, not pixel masks', () => {
   assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
-    'enemySub', 'missile', 'plane', 'planeBankLeft', 'planeBankRight',
-    'planeClimb', 'sweeper', 'torpedo',
+    'missile', 'plane', 'planeBankLeft', 'planeBankRight',
+    'planeClimb', 'torpedo',
   ]);
   for (const [name, design] of Object.entries(LCD_SEGMENTS)) {
     assert.ok(design.width > 0 && design.height > 0, name);
@@ -43,13 +49,13 @@ test('new etched missile and torpedo sizes match their Dynamic collision boxes',
   assert.notDeepEqual(LCD_SEGMENTS.plane.ink, LCD_SEGMENTS.planeBankRight.ink);
   assert.notDeepEqual(LCD_SEGMENTS.planeBankLeft.ink, LCD_SEGMENTS.planeBankRight.ink);
   assert.notDeepEqual(LCD_SEGMENTS.planeClimb.ink, LCD_SEGMENTS.plane.ink);
-  assert.notDeepEqual(LCD_SEGMENTS.enemySub.ink, LCD_SEGMENTS.sweeper.ink);
+  assert.notDeepEqual(CURVED_ETCHES.enemySub.ink, CURVED_ETCHES.sweeper.ink);
 });
 
 test('etched silhouettes maintain distinct aircraft, ship and submarine bounds', () => {
   for (const name of ['plane', 'planeBankRight', 'planeBankLeft', 'planeClimb']) {
     assert.deepEqual([LCD_SEGMENTS[name].width, LCD_SEGMENTS[name].height], [76, 38], name);
   }
-  assert.deepEqual([LCD_SEGMENTS.sweeper.width, LCD_SEGMENTS.sweeper.height], [72, 22]);
-  assert.deepEqual([LCD_SEGMENTS.enemySub.width, LCD_SEGMENTS.enemySub.height], [72, 24]);
+  assert.deepEqual([CURVED_ETCHES.sweeper.width, CURVED_ETCHES.sweeper.height], [72, 22]);
+  assert.deepEqual([CURVED_ETCHES.enemySub.width, CURVED_ETCHES.enemySub.height], [72, 24]);
 });

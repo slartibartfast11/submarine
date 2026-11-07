@@ -9,15 +9,15 @@ An original browser game that looks like a lovingly designed imaginary 1985–19
 - One fixed-aspect-ratio rectangular playfield.
 - Warm, desaturated pale sage-green display; nearly black olive pixels and optionally one lighter muted olive tone.
 - Static, individually designed dark LCD etch silhouettes on a pale panel — **not** an animated low-resolution bitmap display. Disable nearest-neighbour pixel filtering and enable GPU/browser antialiasing so fractional responsive canvas scaling does not produce a CGA-like shimmer. No gradients, glows, damage overlays, heavy scanlines or modern visual effects.
-- Sky: planes crossing horizontally with original level-flight and banking sprites; very understated clouds and mountains.
-- Waterline: strong, slightly jagged separator near mid-screen.
-- Underwater: submarine on one of **six** horizontal positions and **two** depth lanes; unobtrusive seabed stones and plants.
-- HUD: top-left `1-1`, top-right score and minimal game state, monochrome pixel/monospace type.
+- Sky: original fixed-pose fighter aircraft above lightly screen-printed curved cloud arches, not CGA triangle mountains or rectangular clouds.
+- Waterline: fine nearly straight continuous line, without repeating sawteeth.
+- Underwater: six columns and two depth lanes with very faint guide lines and organic etched seabed contours.
+- HUD: segmented score numerals and clean modern proportional labels, not bitmap computer text.
 
 ## Sprites / motion
 
 - Aircraft use four original etched LCD fighter-bomber masks: **profile level flight**, **right bank/dive**, an independently drawn **left bank/dive**, and an oblique underside **high-G climb**. All have narrow pointed noses, swept fighter wings and restrained hints of underwing stores. They are interpreted from the design-study references, not pixel-traced from generated images or the original game.
-- Player submarine retains its existing compact, slightly whimsical silhouette with tower/periscope/portholes. Enemy submarine has an offset conning tower and distinct hull profile. The surface escort has a visible bridge, mast and deck detail.
+- Player submarine is a purpose-drawn smooth Bézier hull with small cutout portholes, conning tower and propeller. Enemy sub has a distinct low hull and tower; surface escort has a graceful hull, bridge and mast. These are original continuous LCD etches, not magnified 1-bit grids.
 - Six geometric etched silhouettes are drawn from deliberately shaped polygons with transparent apertures. The etches are rendered at 3× internal texture resolution, then displayed at their original logical sizes; this supersamples diagonals without changing collision bounds. The narrow upward dart is 12×18 px; the hollow finned torpedo is 26×8 px. No square-pixel raster texture construction for those six elements. Missiles launch **vertically upward**, fixed X at launch. Never diagonal or homing, including Dynamic mode.
 - Torpedoes move **horizontally** toward side-of-screen submarines.
 - Enemy bombs originate at aircraft; sweeper charges originate at sweepers; they fall visibly.
@@ -31,4 +31,4 @@ Draw our own ships, planes, submarine, HUD, environment and sounds. Do not impor
 
 ## First playable prototype limitations
 
-The player submarine, bomb and starburst retain their existing 1-bit masks, rendered with normal linear filtering instead of forced nearest-neighbour pixel-art filtering. Text uses high-resolution Phaser text textures. The geometry and gameplay states are unchanged. Aircraft, ships and weapons use flat filled polygons and transparent apertures composited into static Phaser textures, for a physical fixed-segment-LCD effect. An original three-chirp WebAudio entry signal replaces the sustained electronic tone. No sampled sounds or background music yet. Camera shake, particles, and rich animation are deliberately excluded.
+Only the impact starburst retains a pixel grid. Vessel hulls and bombs are high-resolution curved etches; the quiet static LCD backdrop is generated at double resolution. Text uses high-resolution Phaser text textures. The geometry and gameplay states are unchanged. Aircraft, ships and weapons use flat filled polygons and transparent apertures composited into static Phaser textures, for a physical fixed-segment-LCD effect. An original three-chirp WebAudio entry signal replaces the sustained electronic tone. No sampled sounds or background music yet. Camera shake, particles, and rich animation are deliberately excluded.

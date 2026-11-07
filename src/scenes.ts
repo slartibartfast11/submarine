@@ -12,6 +12,7 @@ import {
 import { installSprites, createEtchedImage } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
+import { drawLcdBackdrop } from './lcd-background';
 import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
@@ -77,34 +78,15 @@ type Shot = {
 
 function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
   return scene.add.text(x, y, contents, {
-    fontFamily: 'monospace', fontSize: `${size}px`, color: colour,
+    fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: '600',
+    fontSize: `${size}px`, color: colour,
   }).setResolution(3);
 }
 
 function drawLandscape(scene: Phaser.Scene): void {
-  const g = scene.add.graphics().setDepth(-10);
-  g.fillStyle(COLOURS.background).fillRect(0, 0, SCREEN.width, SCREEN.height);
-  // Quiet LCD-style background detail. Avoid clutter behind interactive objects.
-  g.fillStyle(COLOURS.light, 0.5);
-  g.fillTriangle(50, SCREEN.waterline - 13, 180, SCREEN.waterline - 65, 310, SCREEN.waterline - 13);
-  g.fillTriangle(270, SCREEN.waterline - 13, 390, SCREEN.waterline - 44, 515, SCREEN.waterline - 13);
-  g.fillTriangle(725, SCREEN.waterline - 13, 820, SCREEN.waterline - 55, 930, SCREEN.waterline - 13);
-  for (const [x, y] of [[97, 81], [382, 104], [711, 70], [838, 126]]) {
-    g.fillRect(x, y, 48, 5).fillRect(x + 9, y - 5, 26, 5);
-  }
-  g.lineStyle(3, COLOURS.dark, 0.9);
-  g.beginPath().moveTo(0, SCREEN.waterline);
-  for (let x = 0; x <= SCREEN.width; x += 12) g.lineTo(x, SCREEN.waterline + (x % 24 === 0 ? 0 : 3));
-  g.strokePath();
-  g.lineStyle(1, COLOURS.mid, 0.33);
-  for (const y of PLAYER_DEPTHS) g.lineBetween(18, y + 20, SCREEN.width - 18, y + 20);
-  g.lineStyle(3, COLOURS.mid, 0.7).lineBetween(0, SCREEN.seafloor, SCREEN.width, SCREEN.seafloor);
-  g.fillStyle(COLOURS.mid, 0.52);
-  for (const x of [38, 64, 182, 511, 620, 837, 908]) {
-    g.fillTriangle(x, SCREEN.seafloor, x + 8, SCREEN.seafloor - 17, x + 17, SCREEN.seafloor);
-    g.fillTriangle(x + 12, SCREEN.seafloor, x + 19, SCREEN.seafloor - 10, x + 25, SCREEN.seafloor);
-  }
+  drawLcdBackdrop(scene);
 }
+
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
@@ -114,7 +96,7 @@ export class MenuScene extends Phaser.Scene {
     drawLandscape(this);
     addLabel(this, 320, 76, 'SUBMARINE', 57);
     addLabel(this, 245, 149, 'AN IMAGINARY LCD GAME', 22);
-    this.add.image(315, 354, 'player').setScale(1.8);
+    createEtchedImage(this, 315, 354, 'player').setDisplaySize(76*1.8, 30*1.8);
     createEtchedImage(this, 650, 250, 'plane')
       .setDisplaySize(76 * 1.45, 38 * 1.45).setFlipX(true);
     addLabel(this, 268, 392, '1  CLASSIC  -  STEPPED LCD WORLD', 21);
@@ -203,7 +185,7 @@ export class BattleScene extends Phaser.Scene {
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
     this.hud = new LcdHud(this, this.mode);
-    this.player = this.add.image(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
+    this.player = createEtchedImage(this, PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
     this.gameOverHint = addLabel(this, 290, 509, 'ESC  MENU / START AGAIN', 16).setDepth(30).setVisible(false);
     this.drawHud();

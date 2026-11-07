@@ -38,7 +38,9 @@ Version 0.3.0 gives aircraft four original fixed LCD etched attitudes: compact p
 
 Version 0.3.1 removes the old forced pixel-art rendering mode, enables smooth antialiasing for responsive LCD scaling, renders geometric etch textures at 3× their displayed size, and raises the internal text texture resolution. Artwork, flight logic, sound, and hitbox dimensions remain unchanged.
 
-This is version 0.3.1, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+Version 0.3.2 replaces the player submarine, enemy submarine, surface ship and falling bombs with original curved high-resolution LCD etches, and updates the scenery to delicate fixed curved shapes rather than pixel-grid mountains and zigzag waves. Permanent HUD legends now use clean proportional lettering while scores remain seven-segment. Flight logic, hitboxes and sound are unchanged.
+
+This is version 0.3.2, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

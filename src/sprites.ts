@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { COLOURS } from './config';
 import { SPRITE_MASKS } from './sprite-masks';
 import { LCD_SEGMENTS, type SegmentPolygon } from './lcd-segments';
+import { CURVED_ETCHES } from './curved-art';
 
 // Supersample curves and diagonal edges once at texture creation, then
 // display at their original logical LCD size. This avoids stair-stepping on
@@ -11,7 +12,7 @@ export const LCD_ETCH_SUPERSAMPLE = 3;
 export function createEtchedImage(
   scene: Phaser.Scene, x: number, y: number, name: string,
 ): Phaser.GameObjects.Image {
-  const design = LCD_SEGMENTS[name];
+  const design = CURVED_ETCHES[name] ?? LCD_SEGMENTS[name];
   const image = scene.add.image(x, y, name);
   if (design) image.setDisplaySize(design.width, design.height);
   return image;
@@ -49,7 +50,7 @@ export function installSprites(scene: Phaser.Scene): void {
     pixels.destroy();
   }
 
-  for (const [name, etch] of Object.entries(LCD_SEGMENTS)) {
+  for (const [name, etch] of Object.entries({ ...LCD_SEGMENTS, ...CURVED_ETCHES })) {
     if (scene.textures.exists(name)) continue;
     const texture = scene.textures.createCanvas(
       name, etch.width * LCD_ETCH_SUPERSAMPLE, etch.height * LCD_ETCH_SUPERSAMPLE,
@@ -58,10 +59,19 @@ export function installSprites(scene: Phaser.Scene): void {
     const ctx = texture.getContext();
     ctx.scale(LCD_ETCH_SUPERSAMPLE, LCD_ETCH_SUPERSAMPLE);
     ctx.fillStyle = `#${COLOURS.dark.toString(16).padStart(6, '0')}`;
-    for (const polygon of etch.ink) fillPolygon(ctx, polygon);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = '#000000';
-    for (const aperture of etch.clear) fillPolygon(ctx, aperture);
+    if (name in CURVED_ETCHES) {
+      const shape = CURVED_ETCHES[name];
+      for (const path of shape.ink) ctx.fill(new Path2D(path));
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000000';
+      for (const path of shape.clear) ctx.fill(new Path2D(path));
+    } else {
+      const shape = LCD_SEGMENTS[name];
+      for (const polygon of shape.ink) fillPolygon(ctx, polygon);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000000';
+      for (const aperture of shape.clear) fillPolygon(ctx, aperture);
+    }
     ctx.globalCompositeOperation = 'source-over';
     texture.refresh();
   }

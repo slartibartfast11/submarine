@@ -12,9 +12,9 @@ const OFF = 0xaebaa9;
 
 function staticLabel(scene: Phaser.Scene, x: number, y: number, value: string, fontSize: number, color = '#52634e'): Phaser.GameObjects.Text {
   return scene.add.text(x, y, value, {
-    fontFamily: 'monospace',
+    fontFamily: 'Arial, Helvetica, sans-serif',
     fontSize: `${fontSize}px`,
-    fontStyle: 'bold',
+    fontStyle: '600',
     color,
   }).setDepth(22).setResolution(3);
 }

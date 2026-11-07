@@ -1,28 +1,5 @@
-/** Original one-bit fixed segments retained from the existing LCD game. */
-const RAW_MASKS: Record<string, string[]> = {
-  player: [
-    '..................XX..................',
-    '..................XX..................',
-    '..............XXXXXXXX................',
-    '..............X.XXXX.X................',
-    '..............XXXXXXXX................',
-    '.............XXXXXXXXXX...............',
-    '.....XXXXXXXXXXXXXXXXXXXXXXXXXXXXX....',
-    '..XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...',
-    '.XX...XX...XX...XX...XX...XX...XXXXX..',
-    'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    '.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.',
-    '..XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX..',
-    '.....XXXXXXXXXXXXXXXXXXXXXXXXXXXX.....',
-  ],
-  bomb: [
-    '..XX..',
-    '.XXXX.',
-    'XXXXXX',
-    'XXXXXX',
-    '.XXXX.',
-    '..XX..',
-  ],
+/** The remaining 1-bit mask is a deliberately geometric impact flash. */
+const RAW_MASKS: Record<string,string[]>={
   star: [
     '.....XX.....',
     '.....XX.....',
@@ -37,11 +14,9 @@ const RAW_MASKS: Record<string, string[]> = {
     '.....XX.....',
   ],
 };
-
-/** Original player and explosion sprites stay on the same fixed-size mask grid. */
-export const SPRITE_MASKS: Record<string, string[]> = Object.fromEntries(
-  Object.entries(RAW_MASKS).map(([name, rows]) => {
-    const width = Math.max(...rows.map(row => row.length));
-    return [name, rows.map(row => row.padEnd(width, '.'))];
-  }),
+export const SPRITE_MASKS: Record<string,string[]> = Object.fromEntries(
+ Object.entries(RAW_MASKS).map(([name,rows])=>{
+  const width=Math.max(...rows.map(row=>row.length));
+  return [name,rows.map(row=>row.padEnd(width,'.'))];
+ }),
 );
