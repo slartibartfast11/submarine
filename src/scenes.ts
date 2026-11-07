@@ -3,7 +3,7 @@ import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
   CLASSIC_TORPEDO_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
   CLASSIC_ROW_Y, ENTRY_STEP_MS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
-  advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, speedScale,
+  advanceWarpCode, canFire, chooseBest, classicPlaneRow, classicTickMs, speedScale,
   planePoseForMotion,
   torpedoUnlocked,
   stageAfter, stageGoal, stageTarget,
@@ -13,6 +13,7 @@ import { installSprites, createEtchedImage } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
+import { addLabel } from './labels';
 import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
@@ -42,7 +43,6 @@ type Enemy = {
   phase: number;
   nextShotAt: number;
   shot: Shot | null;
-  airRow: number;
   ticksAlive: number;
   gridColumn: number;
   gridRow: number;
@@ -73,15 +73,7 @@ type Shot = {
   ticksInFlight: number;
   emergencyIntercept: Shot | null;
   prevHalfColumn: number;
-  prevHalfRow: number;
 };
-
-function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
-  return scene.add.text(x, y, contents, {
-    fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: '600',
-    fontSize: `${size}px`, color: colour,
-  }).setResolution(3);
-}
 
 function drawLandscape(scene: Phaser.Scene): void {
   drawLcdBackdrop(scene);
@@ -158,8 +150,6 @@ export class BattleScene extends Phaser.Scene {
     this.startWarp = data.warp ?? null;
     this.warpSequence = '';
     this.entryTone = null;
-    this.elapsed = 0;
-    this.classicAccumulator = 0;
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -174,10 +164,7 @@ export class BattleScene extends Phaser.Scene {
     this.state = 'entering';
     this.stageKills = 0;
     this.pendingStageAdvance = false;
-    this.nextPlane = 850;
-    this.nextSweeper = 1800;
-    this.nextEnemySub = 3000;
-    this.lastLaunchTime = -100000;
+    this.resetSpawns();
   }
 
   create(): void {
@@ -373,7 +360,7 @@ export class BattleScene extends Phaser.Scene {
       speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 39 : 41,
       phase: Math.random() * Math.PI * 2,
       nextShotAt: this.elapsed * 1000 + (kind === 'sub' ? 1400 : 800) + Math.random() * 1200,
-      shot: null, airRow, ticksAlive: 0, gridColumn, gridRow, shotsFired: 0,
+      shot: null, ticksAlive: 0, gridColumn, gridRow, shotsFired: 0,
       // Some Classic flights are reconnaissance and never release bombs.
       reconnaissance: kind === 'plane' && this.mode === 'classic' && Math.random() < 0.30,
       activeBombs: 0,
@@ -393,7 +380,7 @@ export class BattleScene extends Phaser.Scene {
       halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
       bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,
       emergencyIntercept: null,
-      prevHalfColumn: -1, prevHalfRow: -1,
+      prevHalfColumn: -1,
     };
     shot.image.setFlipX(vx < 0);
     this.shots.push(shot);
@@ -418,7 +405,6 @@ export class BattleScene extends Phaser.Scene {
     shot.halfColumn = halfColumn;
     shot.halfRow = halfRow;
     shot.prevHalfColumn = halfColumn;
-    shot.prevHalfRow = halfRow;
     shot.stepColumn = stepColumn;
     shot.stepRow = stepRow;
     if (kind === 'torpedo' || kind === 'enemyTorpedo') {
@@ -624,10 +610,10 @@ export class BattleScene extends Phaser.Scene {
           if (enemy.ticksAlive % poseTicks === 0) {
             if (enemy.kind === 'plane') {
               const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
-              const next = classicPlaneStep(enemy.x, enemy.gridRow, enemy.direction, delta);
-              const actualVertical = next.row - enemy.gridRow;
-              enemy.gridRow = next.row;
-              enemy.y = CLASSIC_ROW_Y[next.row];
+              const nextRow = classicPlaneRow(enemy.gridRow, delta);
+              const actualVertical = nextRow - enemy.gridRow;
+              enemy.gridRow = nextRow;
+              enemy.y = CLASSIC_ROW_Y[nextRow];
               const pose = planePoseForMotion(actualVertical, enemy.direction);
               enemy.image.setTexture(pose.texture).setFlipX(pose.flipX);
             }
@@ -644,7 +630,7 @@ export class BattleScene extends Phaser.Scene {
           // A single intermittent enemy sub: appear, fire, optionally change
           // depth and fire again, then disappear. Shots persist when it vanishes.
           const action = classicSubAction(
-            enemy.ticksAlive, enemy.shotsFired, enemy.shot !== null, enemy.subPattern,
+            enemy.ticksAlive, enemy.shotsFired, enemy.subPattern,
           );
           if (action === 'disappear') {
             this.removeEnemy(enemy, false);
@@ -722,7 +708,6 @@ export class BattleScene extends Phaser.Scene {
       if (this.mode === 'classic') {
         shot.ticksInFlight++;
         shot.prevHalfColumn = shot.halfColumn;
-        shot.prevHalfRow = shot.halfRow;
         shot.halfRow += shot.stepRow;
         const isTorpedo = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo';
         if (!isTorpedo || shot.ticksInFlight % CLASSIC_TORPEDO_MOVE_TICKS === 0) {
@@ -870,3 +855,4 @@ export class BattleScene extends Phaser.Scene {
   }
 
 }
+

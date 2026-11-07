@@ -1,5 +1,5 @@
 /** Monochrome impact-starburst mask. */
-const RAW_MASKS: Record<string,string[]>={
+const RAW_MASKS: Record<string, string[]> = {
   star: [
     '.....XX.....',
     '.....XX.....',
@@ -14,9 +14,9 @@ const RAW_MASKS: Record<string,string[]>={
     '.....XX.....',
   ],
 };
-export const SPRITE_MASKS: Record<string,string[]> = Object.fromEntries(
- Object.entries(RAW_MASKS).map(([name,rows])=>{
-  const width=Math.max(...rows.map(row=>row.length));
-  return [name,rows.map(row=>row.padEnd(width,'.'))];
- }),
+export const SPRITE_MASKS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(RAW_MASKS).map(([name, rows]) => {
+    const width = Math.max(...rows.map((row) => row.length));
+    return [name, rows.map((row) => row.padEnd(width, '.'))];
+  }),
 );

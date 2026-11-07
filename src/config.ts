@@ -40,13 +40,8 @@ export function planePoseForMotion(
   return { texture: 'plane', flipX: travelDirection === -1 };
 }
 
-export function classicPlaneStep(
-  x: number, row: number, direction: -1 | 1, verticalChange: -1 | 0 | 1,
-): { x: number; row: number } {
-  return {
-    x: x + CLASSIC_CELL_WIDTH * direction,
-    row: Math.max(0, Math.min(CLASSIC_AIR_ROWS.length - 1, row + verticalChange)),
-  };
+export function classicPlaneRow(row: number, verticalChange: -1 | 0 | 1): number {
+  return Math.max(0, Math.min(CLASSIC_AIR_ROWS.length - 1, row + verticalChange));
 }
 export type GameMode = 'classic' | 'dynamic';
 export type StageNumber = 1 | 2 | 3;
@@ -95,3 +90,4 @@ export function advanceWarpCode(sequence: string, keyCode: string): WarpCodeStat
   }
   return { sequence: '', target: null };
 }
+

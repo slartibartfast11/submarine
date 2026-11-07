@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLOURS, LIVES, SCREEN, type BestRun, type GameMode, type StageNumber } from './config';
+import { addLabel } from './labels';
 
 // Seven-segment digit definitions; inactive segments remain faintly visible.
 const DIGITS: Record<string, string> = {
@@ -9,14 +10,6 @@ const DIGITS: Record<string, string> = {
 };
 const OFF = 0xaebaa9;
 
-function staticLabel(scene: Phaser.Scene, x: number, y: number, value: string, fontSize: number, color = '#52634e'): Phaser.GameObjects.Text {
-  return scene.add.text(x, y, value, {
-    fontFamily: 'Arial, Helvetica, sans-serif',
-    fontSize: `${fontSize}px`,
-    fontStyle: '600',
-    color,
-  }).setDepth(22).setResolution(3);
-}
 function segment(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number): void {
   g.fillRect(Math.round(x), Math.round(y), Math.ceil(w), Math.ceil(h));
 }
@@ -62,10 +55,10 @@ export class LcdHud {
     const panel = scene.add.graphics().setDepth(20);
     panel.fillStyle(COLOURS.background).fillRect(0, 0, SCREEN.width, SCREEN.hudHeight);
     panel.lineStyle(2, COLOURS.dark, 0.75).lineBetween(0, SCREEN.hudHeight, SCREEN.width, SCREEN.hudHeight);
-    staticLabel(scene, 116, 16, 'SCORE', 17);
-    staticLabel(scene, 18, 54, 'HI SCORE', 16);
-    staticLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69');
-    this.gameOverField = staticLabel(scene, 710, 14, 'GAME OVER', 25, '#acb9a8');
+    addLabel(scene, 116, 16, 'SCORE', 17, '#52634e').setDepth(22);
+    addLabel(scene, 18, 54, 'HI SCORE', 16, '#52634e').setDepth(22);
+    addLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69').setDepth(22);
+    this.gameOverField = addLabel(scene, 710, 14, 'GAME OVER', 25, '#acb9a8').setDepth(22);
     this.pixels = scene.add.graphics().setDepth(21);
   }
 
@@ -83,3 +76,4 @@ export class LcdHud {
     this.gameOverField.setColor(gameOver ? '#26372d' : '#acb9a8');
   }
 }
+

@@ -13,21 +13,28 @@ test('only the impact starburst retains a 1-bit mask', () => {
       assert.equal(row.length, mask[0].length, name);
       assert.match(row, /^[X.]+$/, name);
     }
-    assert.ok(mask.some(row => row.includes('X')), name);
+    assert.ok(
+      mask.some((row) => row.includes('X')),
+      name,
+    );
   }
-  assert.deepEqual(Object.keys(CURVED_ETCHES).sort(), ['bomb','enemySub','player','sweeper']);
-  for (const [name,etch] of Object.entries(CURVED_ETCHES)) {
-    assert.ok(etch.width>0 && etch.height>0,name);
-    assert.ok(etch.ink.length>0,name);
-    for(const p of [...etch.ink,...etch.clear]) assert.ok(p.startsWith('M'),name);
+  assert.deepEqual(Object.keys(CURVED_ETCHES).sort(), ['bomb', 'enemySub', 'player', 'sweeper']);
+  for (const [name, etch] of Object.entries(CURVED_ETCHES)) {
+    assert.ok(etch.width > 0 && etch.height > 0, name);
+    assert.ok(etch.ink.length > 0, name);
+    for (const p of [...etch.ink, ...etch.clear]) assert.ok(p.startsWith('M'), name);
   }
-  assert.deepEqual([CURVED_ETCHES.player.width,CURVED_ETCHES.player.height],[76,30]);
+  assert.deepEqual([CURVED_ETCHES.player.width, CURVED_ETCHES.player.height], [76, 30]);
 });
 
 test('polygon etches have valid bounds', () => {
   assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
-    'missile', 'plane', 'planeBankLeft', 'planeBankRight',
-    'planeClimb', 'torpedo',
+    'missile',
+    'plane',
+    'planeBankLeft',
+    'planeBankRight',
+    'planeClimb',
+    'torpedo',
   ]);
   for (const [name, design] of Object.entries(LCD_SEGMENTS)) {
     assert.ok(design.width > 0 && design.height > 0, name);

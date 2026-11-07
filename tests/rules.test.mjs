@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import {
   CLASSIC_COLUMNS, CLASSIC_ROWS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
   CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
-  classicHalfHitsCell, classicShotsMeet, classicMissileBombContact, classicSubAction,
+  classicHalfHitsCell, classicMissileBombContact, classicSubAction,
   classicTorpedoDirection, classicTorpedoY, classicTorpedoesContact,
   chooseSubPattern, dynamicSubAction, dynamicSubDepthProgress,
   classicPlaneCanRelease,
@@ -10,7 +10,7 @@ import {
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
-  advanceWarpCode, canFire, chooseBest, classicPlaneStep, classicTickMs, CLASSIC_AIR_ROWS,
+  advanceWarpCode, canFire, chooseBest, classicPlaneRow, classicTickMs, CLASSIC_AIR_ROWS,
   planePoseForMotion,
   CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS,
   CLASSIC_TORPEDO_MOVE_TICKS,
@@ -68,19 +68,17 @@ test('Classic is a discrete shared clock which accelerates by cycle', () => {
   assert.equal(CLASSIC_ACTOR_MOVE_TICKS, 4);
   assert.equal(CLASSIC_SURFACE_MOVE_TICKS, 8);
 });
-test('Classic planes ALWAYS advance horizontally, independently of altitude', () => {
-  for (const direction of [-1, 1]) {
-    for (let row = 0; row < CLASSIC_AIR_ROWS.length; row++) {
-      for (const vertical of [-1, 0, 1]) {
-        const next = classicPlaneStep(400, row, direction, vertical);
-        assert.equal(next.x, 400 + CLASSIC_CELL_WIDTH * direction);
-        assert.ok(next.row >= 0 && next.row < CLASSIC_AIR_ROWS.length);
-        assert.ok(Math.abs(next.row - row) <= 1);
-      }
+test('Classic aircraft altitude stays within the sky rows', () => {
+  for (let row = 0; row < CLASSIC_AIR_ROWS.length; row++) {
+    for (const vertical of [-1, 0, 1]) {
+      const nextRow = classicPlaneRow(row, vertical);
+      assert.ok(nextRow >= 0 && nextRow < CLASSIC_AIR_ROWS.length);
+      assert.ok(Math.abs(nextRow - row) <= 1);
     }
   }
-  assert.deepEqual(classicPlaneStep(0, 1, 1, -1), { x: CLASSIC_CELL_WIDTH, row: 0 });
-  assert.deepEqual(classicPlaneStep(0, 0, -1, -1), { x: -CLASSIC_CELL_WIDTH, row: 0 });
+  assert.equal(classicPlaneRow(1, -1), 0);
+  assert.equal(classicPlaneRow(0, -1), 0);
+  assert.equal(classicPlaneRow(CLASSIC_AIR_ROWS.length - 1, 1), CLASSIC_AIR_ROWS.length - 1);
 });
 
 test('each whole aircraft cell is hit by either fore or aft projectile half', () => {
@@ -94,10 +92,6 @@ test('each whole aircraft cell is hit by either fore or aft projectile half', ()
       if (col < 5) assert.equal(classicHalfHitsCell(col * 2 + 2, row * 2, col, row), false);
     }
   }
-  assert.equal(classicShotsMeet(5, 4, 5, 4), true);
-  assert.equal(classicShotsMeet(5, 4, 4, 4), true);
-  assert.equal(classicShotsMeet(5, 4, 6, 4), true);
-  assert.equal(classicShotsMeet(5, 4, 7, 4), false);
 });
 test('half-cell coordinates are ordered and stay inside the field', () => {
   for (let col = 0; col < 6; col++) {
@@ -109,12 +103,11 @@ test('half-cell coordinates are ordered and stay inside the field', () => {
   for (let row = 0; row < 11; row++) assert.ok(classicHalfRowY(row + 1) > classicHalfRowY(row));
 });
 test('Classic sub appears, attacks, changes depth, may attack again then vanishes', () => {
-  assert.equal(classicSubAction(1, 0, false), 'wait');
-  assert.equal(classicSubAction(4, 0, false), 'fire');
-  assert.equal(classicSubAction(12, 1, true), 'change-depth');
-  assert.equal(classicSubAction(15, 1, false), 'fire');
-  assert.equal(classicSubAction(15, 1, true), 'fire');
-  assert.equal(classicSubAction(32, 2, false), 'disappear');
+  assert.equal(classicSubAction(1, 0), 'wait');
+  assert.equal(classicSubAction(4, 0), 'fire');
+  assert.equal(classicSubAction(12, 1), 'change-depth');
+  assert.equal(classicSubAction(15, 1), 'fire');
+  assert.equal(classicSubAction(32, 2), 'disappear');
 });
 test('Classic torpedo automatically fires towards the visible enemy side', () => {
   assert.equal(classicTorpedoDirection(2, 0), -1);
@@ -165,7 +158,7 @@ test('Emergency assist cannot clear harmless, distant or vertical bombs', () => 
 test('Classic upward missiles intercept bombs one half-column to either side', () => {
   // Missile launched on grid 7; bombs on 6/7/8 all intercept.
   for (const bombColumn of [6, 7, 8]) {
-    assert.equal(classicShotsMeet(7, 8, bombColumn, 8), true);
+    assert.equal(classicMissileBombContact(7, 8, 8, bombColumn, 8, 8), true);
     assert.equal(classicMissileBombContact(7, 9, 8, bombColumn, 7, 8), true);
     // Opposing shots cross between successive LCD states: 8 -> 7, 7 -> 8.
     assert.equal(classicMissileBombContact(7, 8, 7, bombColumn, 7, 8), true);
@@ -176,7 +169,7 @@ test('Classic upward missiles intercept bombs one half-column to either side', (
 test('No interception when vertical trajectories have not met', () => {
   assert.equal(classicMissileBombContact(7, 9, 8, 8, 3, 4), false);
   assert.equal(classicMissileBombContact(7, 5, 4, 8, 9, 10), false);
-  assert.equal(classicShotsMeet(7, 8, 8, 9), false);
+  assert.equal(classicMissileBombContact(7, 8, 8, 8, 9, 9), false);
 });
 test('Player has a distinct lower starting depth', () => {
   assert.equal(PLAYER_DEPTHS.length, 2);
@@ -231,12 +224,12 @@ test('enemy submarines may be decoys, single shooters, dives or double attacks',
   assert.equal(chooseSubPattern(0.4), 'single');
   assert.equal(chooseSubPattern(0.7), 'dive');
   assert.equal(chooseSubPattern(0.9), 'double');
-  assert.equal(classicSubAction(5, 0, false, 'decoy'), 'wait');
-  assert.equal(classicSubAction(13, 0, false, 'decoy'), 'disappear');
-  assert.equal(classicSubAction(4, 0, false, 'single'), 'fire');
-  assert.equal(classicSubAction(12, 1, false, 'single'), 'wait');
-  assert.equal(classicSubAction(12, 1, false, 'dive'), 'change-depth');
-  assert.equal(classicSubAction(16, 1, false, 'double'), 'fire');
+  assert.equal(classicSubAction(5, 0, 'decoy'), 'wait');
+  assert.equal(classicSubAction(13, 0, 'decoy'), 'disappear');
+  assert.equal(classicSubAction(4, 0, 'single'), 'fire');
+  assert.equal(classicSubAction(12, 1, 'single'), 'wait');
+  assert.equal(classicSubAction(12, 1, 'dive'), 'change-depth');
+  assert.equal(classicSubAction(16, 1, 'double'), 'fire');
 });
 test('Dynamic subs rest precisely on two depths, with brief transitions', () => {
   assert.equal(dynamicSubAction(800, 0, 'decoy'), 'wait');
@@ -258,3 +251,4 @@ test('four fighter LCD attitudes are selected by actual change and travel direct
   assert.deepEqual(planePoseForMotion(-1, 1), { texture: 'planeClimb', flipX: false });
   assert.deepEqual(planePoseForMotion(-1, -1), { texture: 'planeClimb', flipX: true });
 });
+

@@ -37,17 +37,6 @@ export function classicHalfHitsCell(
 }
 
 /**
- * Missile and bomb segments have finite LCD width. A missile at half-column
- * 7 hits a bomb at 6, 7 or 8 when they overlap vertically. The missile does
- * not move sideways, and the range never extends past the adjacent slot.
- */
-export function classicShotsMeet(
-  missileCol: number, missileRow: number, bombCol: number, bombRow: number,
-): boolean {
-  return Math.abs(missileCol - bombCol) <= 1 && missileRow === bombRow;
-}
-
-/**
  * Check shared-clock movement for two shots travelling in opposite vertical
  * directions. They may occupy the same half-row on this tick OR swap rows
  * between two snapshots (otherwise the alternate half-row parity can cause
@@ -100,7 +89,7 @@ export function chooseSubPattern(randomValue: number): SubPattern {
 
 /** Independent of live shot count: double attacks can fire at both depths. */
 export function classicSubAction(
-  ticks: number, shotsFired: number, _shotActive: boolean, pattern: SubPattern = 'double',
+  ticks: number, shotsFired: number, pattern: SubPattern = 'double',
 ): ClassicSubAction {
   if (pattern === 'decoy') return ticks >= 13 ? 'disappear' : 'wait';
   if (pattern === 'single') {
@@ -189,3 +178,4 @@ export function classicAdjacentBombThreat(
   }
   return false;
 }
+
