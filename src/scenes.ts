@@ -9,7 +9,7 @@ import {
   stageAfter, stageGoal, stageTarget,
   type BestRun, type GameMode, type StageNumber, type StagePosition,
 } from './config';
-import { installSprites } from './sprites';
+import { installSprites, createEtchedImage } from './sprites';
 import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import {
@@ -78,7 +78,7 @@ type Shot = {
 function addLabel(scene: Phaser.Scene, x: number, y: number, contents: string, size: number, colour = '#26372d'): Phaser.GameObjects.Text {
   return scene.add.text(x, y, contents, {
     fontFamily: 'monospace', fontSize: `${size}px`, color: colour,
-  }).setResolution(2);
+  }).setResolution(3);
 }
 
 function drawLandscape(scene: Phaser.Scene): void {
@@ -115,7 +115,8 @@ export class MenuScene extends Phaser.Scene {
     addLabel(this, 320, 76, 'SUBMARINE', 57);
     addLabel(this, 245, 149, 'AN IMAGINARY LCD GAME', 22);
     this.add.image(315, 354, 'player').setScale(1.8);
-    this.add.image(650, 250, 'plane').setScale(1.45).setFlipX(true);
+    createEtchedImage(this, 650, 250, 'plane')
+      .setDisplaySize(76 * 1.45, 38 * 1.45).setFlipX(true);
     addLabel(this, 268, 392, '1  CLASSIC  -  STEPPED LCD WORLD', 21);
     addLabel(this, 268, 426, '2  DYNAMIC  -  THE LCD COMES ALIVE', 21);
     addLabel(this, 268, 466, 'ARROWS/WASD: MOVE     SPACE: MISSILE     X: TORPEDO', 14);
@@ -387,7 +388,7 @@ export class BattleScene extends Phaser.Scene {
         (direction === 1 ? -65 : SCREEN.width + 65);
     const enemy: Enemy = {
       kind,
-      image: this.add.image(x, y, kind === 'sub' ? 'enemySub' : kind).setDepth(3),
+      image: createEtchedImage(this, x, y, kind === 'sub' ? 'enemySub' : kind).setDepth(3),
       x, y, prevX: x, prevY: y, baseY: y, direction,
       speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 39 : 41,
       phase: Math.random() * Math.PI * 2,
@@ -407,7 +408,7 @@ export class BattleScene extends Phaser.Scene {
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
     const texture = kind === 'missile' ? 'missile' : kind === 'torpedo' || kind === 'enemyTorpedo' ? 'torpedo' : 'bomb';
     const shot: Shot = {
-      kind, image: this.add.image(x, y, texture).setDepth(4),
+      kind, image: createEtchedImage(this, x, y, texture).setDepth(4),
       x, y, prevX: x, prevY: y, vx, vy, owner,
       halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
       bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,

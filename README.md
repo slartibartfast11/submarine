@@ -36,7 +36,9 @@ Version 0.2.9 redraws the aircraft, surface escort, enemy submarine, upward miss
 
 Version 0.3.0 gives aircraft four original fixed LCD etched attitudes: compact profile level flight, independently drawn right and left bank/dive views, and an oblique underside high-G climb. Classic selects the pose from actual discrete altitude changes; Dynamic changes these attitudes during continuous altitude movement. The rest of the game art, physics, sound and score rules remain as they were.
 
-This is version 0.3.0, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
+Version 0.3.1 removes the old forced pixel-art rendering mode, enables smooth antialiasing for responsive LCD scaling, renders geometric etch textures at 3× their displayed size, and raises the internal text texture resolution. Artwork, flight logic, sound, and hitbox dimensions remain unchanged.
+
+This is version 0.3.1, an early, playable work in progress. Gameplay, balance and artwork are still evolving.
 
 ## About
 

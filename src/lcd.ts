@@ -16,7 +16,7 @@ function staticLabel(scene: Phaser.Scene, x: number, y: number, value: string, f
     fontSize: `${fontSize}px`,
     fontStyle: 'bold',
     color,
-  }).setDepth(22).setResolution(2);
+  }).setDepth(22).setResolution(3);
 }
 function segment(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number): void {
   g.fillRect(Math.round(x), Math.round(y), Math.ceil(w), Math.ceil(h));

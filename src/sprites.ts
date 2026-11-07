@@ -3,6 +3,20 @@ import { COLOURS } from './config';
 import { SPRITE_MASKS } from './sprite-masks';
 import { LCD_SEGMENTS, type SegmentPolygon } from './lcd-segments';
 
+// Supersample curves and diagonal edges once at texture creation, then
+// display at their original logical LCD size. This avoids stair-stepping on
+// non-integer FIT scales, without changing collision geometry.
+export const LCD_ETCH_SUPERSAMPLE = 3;
+
+export function createEtchedImage(
+  scene: Phaser.Scene, x: number, y: number, name: string,
+): Phaser.GameObjects.Image {
+  const design = LCD_SEGMENTS[name];
+  const image = scene.add.image(x, y, name);
+  if (design) image.setDisplaySize(design.width, design.height);
+  return image;
+}
+
 /** Fill a closed polygon on a generated, transparent LCD sprite texture. */
 function fillPolygon(ctx: CanvasRenderingContext2D, points: SegmentPolygon): void {
   ctx.beginPath();
@@ -37,9 +51,12 @@ export function installSprites(scene: Phaser.Scene): void {
 
   for (const [name, etch] of Object.entries(LCD_SEGMENTS)) {
     if (scene.textures.exists(name)) continue;
-    const texture = scene.textures.createCanvas(name, etch.width, etch.height);
+    const texture = scene.textures.createCanvas(
+      name, etch.width * LCD_ETCH_SUPERSAMPLE, etch.height * LCD_ETCH_SUPERSAMPLE,
+    );
     if (!texture) throw new Error(`Unable to create LCD segment texture: ${name}`);
     const ctx = texture.getContext();
+    ctx.scale(LCD_ETCH_SUPERSAMPLE, LCD_ETCH_SUPERSAMPLE);
     ctx.fillStyle = `#${COLOURS.dark.toString(16).padStart(6, '0')}`;
     for (const polygon of etch.ink) fillPolygon(ctx, polygon);
     ctx.globalCompositeOperation = 'destination-out';
