@@ -1,12 +1,4 @@
-/**
- * Original custom-shaped LCD etch designs.
- *
- * Each sprite is a fixed collection of ink polygons and transparent apertures,
- * not an image that is updated pixel-by-pixel. One unchanging mask is placed at
- * the positions supported by the game, as in a physical LCD handheld.
- *
- * The original player's sprite stays in sprite-masks.ts by design.
- */
+/** Fixed polygon sprite masks: ink adds filled areas; clear defines transparent apertures. */
 export type SegmentPoint = readonly [number, number];
 export type SegmentPolygon = readonly SegmentPoint[];
 export type SegmentEtch = {
@@ -17,8 +9,7 @@ export type SegmentEtch = {
 };
 
 export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
-  // Level-flight fighter-bomber, compact profile: pointed nose to the right,
-  // canopy, angular swept tail, two underwing pylons. No airliner proportions.
+  // Level-flight side profile: pointed nose, swept tail and underwing stores.
   plane: {
     width: 76, height: 38,
     ink: [
@@ -34,8 +25,7 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[15,20],[32,19],[32,20],[15,21]],
     ],
   },
-  // Right-bank dive: oblique underside, near wing dominates. The small
-  // transparent notch at its rear is the etched aileron cue.
+  // Right-bank dive: oblique underside, with an aileron aperture.
   planeBankRight: {
     width: 76, height: 38,
     ink: [
@@ -53,8 +43,7 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[35,6],[37,5],[42,16],[39,16]],
     ],
   },
-  // Left-bank dive: independently composed, not a mirror of the right-bank
-  // attitude. Different relative wing and stores placement.
+  // Left-bank dive: independently defined underside silhouette.
   planeBankLeft: {
     width: 76, height: 38,
     ink: [
@@ -72,8 +61,7 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[47,32],[54,36],[46,35]],
     ],
   },
-  // High-G pull-up: broad underside and swept wings. The nose climbs
-  // steeply, but the silhouette is slightly oblique rather than vertical.
+  // Climbing aircraft: oblique underside and swept wings.
   planeClimb: {
     width: 76, height: 38,
     ink: [
@@ -91,7 +79,7 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[52,21],[61,24],[61,25],[49,23]],
     ],
   },
-  // A simple upward etched dart, with a single thin shaft and small base.
+  // Vertical missile mask.
   missile: {
     width: 12, height: 18,
     ink: [
@@ -101,7 +89,7 @@ export const LCD_SEGMENTS: Record<string, SegmentEtch> = {
       [[5,7],[6,7],[6,13],[5,13]],
     ],
   },
-  // Short hollow torpedo with distinct rear fins and a modest pointed nose.
+  // Hollow torpedo mask with tail fins and pointed nose.
   torpedo: {
     width: 26, height: 8,
     ink: [

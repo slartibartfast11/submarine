@@ -1,34 +1,28 @@
-# Visual design — imaginary LCD submarine game
+# Visual design and rendering
 
-## Vision
+## Display
 
-An original browser game that looks like a lovingly designed imaginary 1985–1990 monochrome LCD handheld, **not** a reproduction of any particular model. Classic and Dynamic must be visually recognisable as the same game.
+- Logical resolution: **960 × 540** (see `SCREEN` in `src/config.ts`), scaled to fit the browser viewport.
+- Background: pale sage (`#d5dac8`); active LCD shapes: dark olive (`#26372d`).
+- Renderer: Phaser with pixel-art filtering disabled and antialiasing enabled.
+- Fixed backdrop: 2×-resolution canvas texture in `src/lcd-background.ts`, with faint curved clouds, a continuous waterline, depth guides and seabed contours.
+- HUD: seven-segment-style score digits with faint inactive segments, proportional text labels and three X indicators for lost submarines.
 
-## Screen
+## Sprite assets
 
-- One fixed-aspect-ratio rectangular playfield.
-- Warm, desaturated pale sage-green display; nearly black olive pixels and optionally one lighter muted olive tone.
-- Static, individually designed dark LCD etch silhouettes on a pale panel — **not** an animated low-resolution bitmap display. Disable nearest-neighbour pixel filtering and enable GPU/browser antialiasing so fractional responsive canvas scaling does not produce a CGA-like shimmer. No gradients, glows, damage overlays, heavy scanlines or modern visual effects.
-- Sky: original fixed-pose fighter aircraft above lightly screen-printed curved cloud arches, not CGA triangle mountains or rectangular clouds.
-- Waterline: fine nearly straight continuous line, without repeating sawteeth.
-- Underwater: six columns and two depth lanes with very faint guide lines and organic etched seabed contours.
-- HUD: segmented score numerals and clean modern proportional labels, not bitmap computer text.
+- `src/curved-art.ts`: player submarine, enemy submarine, surface escort and bombs. Each sprite defines filled and transparent `Path2D` shapes with Bézier curves.
+- `src/lcd-segments.ts`: polygon-defined aircraft, missile and torpedo masks. Aircraft textures are `plane` (level profile), `planeBankRight`, `planeBankLeft` and `planeClimb` (oblique underside).
+- `src/sprite-masks.ts`: the one remaining square-pixel mask, used for the impact starburst.
+- `src/sprites.ts`: rasterises curved paths and polygons at **3×** logical sprite resolution. The resulting textures are displayed at their logical widths and heights.
+- The four aircraft poses are independently authored fixed silhouettes, with no frame-by-frame pixel animation.
 
-## Sprites / motion
+## Motion and interaction
 
-- Aircraft use four original etched LCD fighter-bomber masks: **profile level flight**, **right bank/dive**, an independently drawn **left bank/dive**, and an oblique underside **high-G climb**. All have narrow pointed noses, swept fighter wings and restrained hints of underwing stores. They are interpreted from the design-study references, not pixel-traced from generated images or the original game.
-- Player submarine is a purpose-drawn smooth Bézier hull with small cutout portholes, conning tower and propeller. Enemy sub has a distinct low hull and tower; surface escort has a graceful hull, bridge and mast. These are original continuous LCD etches, not magnified 1-bit grids.
-- Six geometric etched silhouettes are drawn from deliberately shaped polygons with transparent apertures. The etches are rendered at 3× internal texture resolution, then displayed at their original logical sizes; this supersamples diagonals without changing collision bounds. The narrow upward dart is 12×18 px; the hollow finned torpedo is 26×8 px. No square-pixel raster texture construction for those six elements. Missiles launch **vertically upward**, fixed X at launch. Never diagonal or homing, including Dynamic mode.
-- Torpedoes move **horizontally** toward side-of-screen submarines.
-- Enemy bombs originate at aircraft; sweeper charges originate at sweepers; they fall visibly.
-- Hit effects occur **only upon real collision**, use two or three jagged pixel starburst poses.
-- Classic: stepped motion and one fixed pose per logical altitude change: same altitude = profile, descending = banking/dive attitude based on direction, ascending = underside climb. On a clamped altitude step, use the *actual* row change rather than the attempted delta. Simulation may still update more frequently for accurate collisions.
-- Dynamic: the same four authored attitudes chosen by climb/descent phase, while position and altitude vary fluidly. This can be enhanced with intermediate animation later.
+- **Classic:** six horizontal columns shared by three sky rows, one surface row and two underwater rows. Aircraft advance once every four shared clock ticks and surface escorts once every eight ticks. Aircraft altitude changes select a fixed silhouette; a blocked altitude change uses the actual resulting row.
+- **Modern:** sprites retain the same artwork while enemies move continuously. Aircraft use fixed level, climb and bank textures during smooth vertical movement.
+- Missiles travel vertically and torpedoes horizontally. Projectile collisions use logical hitboxes rather than opaque-pixel sampling; see `src/collision.ts` and `src/classic-grid.ts`.
+- Entry sound: three short WebAudio oscillator chirps, one per submarine entry position.
 
-## Authenticity and originality
+## Credits and sources
 
-Draw our own ships, planes, submarine, HUD, environment and sounds. Do not import/copy original game textures, screen bezel, startup melody or branding. The project is a non-commercial homage to a *genre* of LCD handheld game, not a source-accurate remake.
-
-## First playable prototype limitations
-
-Only the impact starburst retains a pixel grid. Vessel hulls and bombs are high-resolution curved etches; the quiet static LCD backdrop is generated at double resolution. Text uses high-resolution Phaser text textures. The geometry and gameplay states are unchanged. Aircraft, ships and weapons use flat filled polygons and transparent apertures composited into static Phaser textures, for a physical fixed-segment-LCD effect. An original three-chirp WebAudio entry signal replaces the sustained electronic tone. No sampled sounds or background music yet. Camera shake, particles, and rich animation are deliberately excluded.
+The game is inspired by Casio's *Submarine Battle*. The human designer supplied the gameplay and visual direction; the code and custom in-game graphics were generated with AI under the designer's review. No original Casio graphics or sound assets are used.

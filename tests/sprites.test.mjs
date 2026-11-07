@@ -24,7 +24,7 @@ test('only the impact starburst retains a 1-bit mask', () => {
   assert.deepEqual([CURVED_ETCHES.player.width,CURVED_ETCHES.player.height],[76,30]);
 });
 
-test('six revised silhouettes use deliberate etch polygons, not pixel masks', () => {
+test('polygon etches have valid bounds', () => {
   assert.deepEqual(Object.keys(LCD_SEGMENTS).sort(), [
     'missile', 'plane', 'planeBankLeft', 'planeBankRight',
     'planeClimb', 'torpedo',
@@ -42,7 +42,7 @@ test('six revised silhouettes use deliberate etch polygons, not pixel masks', ()
   }
 });
 
-test('new etched missile and torpedo sizes match their Dynamic collision boxes', () => {
+test('missile and torpedo dimensions match collision boxes', () => {
   assert.deepEqual([LCD_SEGMENTS.missile.width, LCD_SEGMENTS.missile.height], [12, 18]);
   assert.deepEqual([LCD_SEGMENTS.torpedo.width, LCD_SEGMENTS.torpedo.height], [26, 8]);
   assert.ok(LCD_SEGMENTS.torpedo.clear.length > 0);
@@ -60,12 +60,12 @@ test('etched silhouettes maintain distinct aircraft, ship and submarine bounds',
   assert.deepEqual([CURVED_ETCHES.enemySub.width, CURVED_ETCHES.enemySub.height], [72, 24]);
 });
 
-test('ship silhouettes stay fixed size and have proper naval details', () => {
+test('vessel path sets retain expected bounds and shape counts', () => {
   const player = CURVED_ETCHES.player;
   const escort = CURVED_ETCHES.sweeper;
   assert.deepEqual([player.width, player.height], [76, 30]);
   assert.deepEqual([escort.width, escort.height], [72, 22]);
-  assert.ok(player.clear.length >= 4); // readable portholes
-  assert.ok(escort.ink.length >= 6); // superstructure, mast, deck and gun
-  assert.ok(escort.clear.length >= 3); // bridge apertures
+  assert.ok(player.clear.length >= 4);
+  assert.ok(escort.ink.length >= 6);
+  assert.ok(escort.clear.length >= 3);
 });

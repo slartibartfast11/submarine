@@ -9,9 +9,7 @@ new Phaser.Game({
   width: SCREEN.width,
   height: SCREEN.height,
   backgroundColor: COLOURS.background,
-  // LCD silhouettes and lettering are smooth native geometry, not a
-  // low-resolution framebuffer. Nearest-neighbour filtering caused shimmer
-  // when the FIT-scaled canvas occupied fractional CSS pixels.
+  // Smooth sampling for vector-style sprites and text when the canvas scales.
   render: { pixelArt: false, antialias: true, antialiasGL: true },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [MenuScene, BattleScene],

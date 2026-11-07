@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLOURS,PLAYER_DEPTHS,SCREEN } from './config';
-/** A quiet, high-resolution, screen-printed LCD backdrop. */
+/** Cache a static backdrop texture at twice the logical display resolution. */
 export function drawLcdBackdrop(scene:Phaser.Scene):void{
  const key='lcd-backdrop-v032';
  if(!scene.textures.exists(key)){

@@ -1,4 +1,4 @@
-/** The remaining 1-bit mask is a deliberately geometric impact flash. */
+/** Monochrome impact-starburst mask. */
 const RAW_MASKS: Record<string,string[]>={
   star: [
     '.....XX.....',

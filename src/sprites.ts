@@ -4,9 +4,7 @@ import { SPRITE_MASKS } from './sprite-masks';
 import { LCD_SEGMENTS, type SegmentPolygon } from './lcd-segments';
 import { CURVED_ETCHES } from './curved-art';
 
-// Supersample curves and diagonal edges once at texture creation, then
-// display at their original logical LCD size. This avoids stair-stepping on
-// non-integer FIT scales, without changing collision geometry.
+// Render textures at 3× logical size; display dimensions and hitboxes stay unchanged.
 export const LCD_ETCH_SUPERSAMPLE = 3;
 
 export function createEtchedImage(
@@ -29,12 +27,7 @@ function fillPolygon(ctx: CanvasRenderingContext2D, points: SegmentPolygon): voi
   ctx.fill();
 }
 
-/**
- * Static silhouettes mimic independently etched physical LCD masks.
- * There are no bitmap squares in these six sprites, and we never copy any
- * original game's artwork. Apertures are genuinely transparent, not painted
- * with the scene background colour.
- */
+/** Create textures from pixel masks, polygon etches and curved Path2D shapes. */
 export function installSprites(scene: Phaser.Scene): void {
   for (const [name, mask] of Object.entries(SPRITE_MASKS)) {
     if (scene.textures.exists(name)) continue;

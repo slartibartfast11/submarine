@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { COLOURS, LIVES, SCREEN, type BestRun, type GameMode, type StageNumber } from './config';
 
-// Hand-drawn seven-segment numerals. Even inactive segments are faintly
-// visible, as if this were a real fixed-segment monochrome LCD.
+// Seven-segment digit definitions; inactive segments remain faintly visible.
 const DIGITS: Record<string, string> = {
   '0': 'abcedf', '1': 'bc', '2': 'abged', '3': 'abgcd',
   '4': 'fgbc', '5': 'afgcd', '6': 'afgecd', '7': 'abc',
@@ -53,7 +52,7 @@ function lifeX(g: Phaser.GameObjects.Graphics, x: number, y: number, active: boo
   g.lineBetween(x + 20, y, x, y + 20);
 }
 
-/** Permanent physical-looking HUD: digits change; etched text only lights up. */
+/** HUD labels, segmented values and lost-submarine indicators. */
 export class LcdHud {
   private readonly pixels: Phaser.GameObjects.Graphics;
   private readonly gameOverField: Phaser.GameObjects.Text;
@@ -77,8 +76,7 @@ export class LcdHud {
     this.pixels.clear();
     lcdString(this.pixels, `${cycle}-${stage}`, 16, 12, 0.9);
     lcdString(this.pixels, String(score).padStart(5, '0'), 206, 12, 0.9);
-    // These Xs record lost submarines, not remaining submarines.
-    // Start with three ghosted outlines; illuminate them left-to-right on losses.
+    // Each lost submarine illuminates one of the three initially faint X marks.
     for (let i = 0; i < LIVES; i++) lifeX(this.pixels, 476 + 39 * i, 17, i < LIVES - lives);
     lcdString(this.pixels, `${best.cycle}-${best.stage}`, 166, 54, 0.64);
     lcdString(this.pixels, String(best.score).padStart(5, '0'), 259, 54, 0.64);

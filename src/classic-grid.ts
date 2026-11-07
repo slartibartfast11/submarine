@@ -141,17 +141,12 @@ export function dynamicSubDepthProgress(ageMs: number, pattern: SubPattern): num
 
 export type ClassicBombFlight = 'straight' | 'diagonal' | 'water-hook';
 
-// A quarter of planes are reconnaissance-only in practice (the spawn chance
-// lives in BattleScene); other aircraft can keep two bombs in flight.
+// Reconnaissance flights cannot release bombs; attack flights allow two active bombs.
 export function classicPlaneCanRelease(reconnaissance: boolean, activeBombs: number): boolean {
   return !reconnaissance && activeBombs < 2;
 }
 
-/**
- * Original-style intermittent releases. Some bombs stay vertical, some begin
- * angling in the sky, and others go straight until they enter the water.
- * These are deterministic decisions once each bomb has been launched.
- */
+/** Assign a bomb's fixed trajectory: straight, diagonal or waterline turn. */
 export function classicBombFlight(randomValue: number): ClassicBombFlight {
   return randomValue < 0.45 ? 'straight' : randomValue < 0.70 ? 'diagonal' : 'water-hook';
 }
@@ -166,12 +161,9 @@ export function classicBombLateralStep(
 }
 
 /**
- * Classic's deliberate interception concession: a straight-up launch can
- * catch a diagonal bomb from ONE neighbouring whole cell if its next few
- * half-cell steps would hit the submarine at its current depth.
- *
- * This only forecasts the established, non-homing bomb path. It does not
- * expand ordinary collision boxes or grant the missile diagonal movement.
+ * A vertical missile can intercept a diagonal bomb from an adjacent whole
+ * cell if the bomb's existing path threatens the current player position.
+ * This does not alter projectile trajectories or ordinary collision bounds.
  */
 export function classicAdjacentBombThreat(
   halfColumn: number, halfRow: number, pattern: ClassicBombFlight,

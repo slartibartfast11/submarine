@@ -7,8 +7,7 @@ export const COLOURS = {
 } as const;
 
 // Shared six-column playfield. Three sky rows, one surface row, two sub rows.
-// The logical rows are uniform across the game; their screen coordinates are
-// adjusted around the waterline for readable 1980s LCD-style sprite art.
+// Row display positions are offset around the waterline.
 export const PLAYER_COLUMNS = [105, 255, 405, 555, 705, 855] as const;
 export const CLASSIC_CELL_WIDTH = 150;
 export const CLASSIC_ROW_Y = [110, 162, 214, 254, 345, 421] as const;
@@ -21,7 +20,7 @@ export const CLASSIC_SURFACE_MOVE_TICKS = 8;
 export const CLASSIC_SUB_LIFETIME_TICKS = 32;
 export const CLASSIC_TORPEDO_MOVE_TICKS = 2;
 export const DYNAMIC_TORPEDO_SPEED = 200;
-// Slow entrance: column 5, then 4, then 3, with a deliberate hold at each.
+// Entry sequence: columns 5, 4, 3; one hold per position.
 export const ENTRY_STEP_MS = 2100;
 
 export function classicTickMs(cycle: number): number {
@@ -30,10 +29,7 @@ export function classicTickMs(cycle: number): number {
 
 export type PlanePose = 'plane' | 'planeBankRight' | 'planeBankLeft' | 'planeClimb';
 
-/**
- * Classic flight changes select one etched LCD mask; no sprite rotation.
- * Dynamic mode can use this same family with continuous movement.
- */
+/** Select the aircraft mask from vertical movement and travel direction. */
 export function planePoseForMotion(
   verticalChange: number, travelDirection: -1 | 1,
 ): { texture: PlanePose; flipX: boolean } {

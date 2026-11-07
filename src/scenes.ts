@@ -207,7 +207,7 @@ export class BattleScene extends Phaser.Scene {
         if (warp.target) { this.warpTo(warp.target); return; }
         if (this.warpSequence) return;
       }
-      // In particular: R, Space and X must NEVER restart a game-over run.
+      // Gameplay input does not restart a game-over run.
       if (this.state !== 'playing') return;
       if (key === 'ArrowLeft' || key === 'KeyA') {
         this.columns = Math.max(0, this.columns - 1);
@@ -251,8 +251,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private playEntryChirp(pose: 0 | 1 | 2): void {
-    // A tiny original synth chirp per entrance pose: "brpp ... brpp ... brrp".
-    // The submarine still takes its time arriving; the tone does not sustain.
+    // Emit one short oscillator chirp for each submarine entry position.
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
     if (!context || context.state !== 'running') return;
@@ -311,7 +310,7 @@ export class BattleScene extends Phaser.Scene {
 
   private warpTo(target: StagePosition): void {
     if (this.state === 'exploding' || this.state === 'gameOver') return;
-    // End the entry audio if the cheat was typed during the opening sequence.
+    // Stop the current chirp when a stage warp interrupts entry.
     if (this.entryTone) {
       try { this.entryTone.stop(); } catch { /* Audio may have already stopped. */ }
       this.entryTone = null;
@@ -569,14 +568,14 @@ export class BattleScene extends Phaser.Scene {
         if (this.state !== 'exploding') return;
         this.state = 'gameOver';
         this.gameOverHint.setVisible(true);
-        this.drawHud(); // Illuminates the previously ghosted GAME OVER segments.
+        this.drawHud();
       });
     } else {
       this.time.delayedCall(650, () => {
         if (this.state !== 'exploding') return;
         this.clearBattlefield();
         this.showStageBanner();
-        this.beginEntry(); // Same frame, fresh quota. Score/lives are retained.
+        this.beginEntry(); // Reset stage progress without resetting score or lives.
       });
     }
   }
@@ -619,7 +618,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.mode === 'classic') {
         enemy.ticksAlive++;
         if (enemy.kind === 'plane' || enemy.kind === 'sweeper') {
-          // An LCD pose persists for four shared-clock ticks.
+          // Aircraft move every four ticks; surface escorts every eight.
           const poseTicks = enemy.kind === 'sweeper' ?
             CLASSIC_SURFACE_MOVE_TICKS : CLASSIC_ACTOR_MOVE_TICKS;
           if (enemy.ticksAlive % poseTicks === 0) {
@@ -669,8 +668,7 @@ export class BattleScene extends Phaser.Scene {
           if (enemy.kind === 'plane') {
             const angle = now * 0.0018 + enemy.phase;
             enemy.y = enemy.baseY + Math.sin(angle) * 15;
-            // Dynamic keeps smooth position updates but shares the aircraft
-            // family. Between climb and dive it returns to level flight.
+            // Choose climbing, descending or level mask from vertical motion.
             const riseFall = Math.cos(angle);
             const pose = planePoseForMotion(
               riseFall > 0.6 ? 1 : riseFall < -0.6 ? -1 : 0, enemy.direction,
@@ -768,8 +766,7 @@ export class BattleScene extends Phaser.Scene {
           )),
       );
       if (other) {
-        // Assisted hits explode at the actual bomb, not midway between
-        // two LCD cells. The missile still launched straight upward.
+        // Assisted interceptions use the bomb position; regular hits use the midpoint.
         this.explode(assisted ? other.x : (shot.x + other.x) / 2,
           assisted ? other.y : (shot.y + other.y) / 2);
         this.destroyShot(shot);
