@@ -20,10 +20,10 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 
 - `src/curved-art.ts`: player submarine, enemy submarine, surface escort and bombs. Each sprite defines filled and transparent `Path2D` shapes with Bézier curves.
 - `src/lcd-segments.ts`: polygon-defined aircraft, missile, torpedo and filled directional-drop masks. Aircraft textures are `plane` (level profile), `planeBankRight`, `planeBankLeft` and `planeClimb` (oblique underside).
-- `src/debris-art.ts`: four dedicated destroyed-vessel Path2D etches, based on the approved Debris B concepts (particulate aircraft and enemy submarine, three-part surface escort, and broken player submarine).
+- `src/debris-art.ts`: destruction etches for the aircraft, surface escort, enemy submarine and player submarine.
 - `src/sprite-masks.ts`: the one remaining square-pixel mask, reserved for projectile-interception starbursts.
 - `src/sprites.ts`: rasterises curved paths and polygons at **3×** logical sprite resolution. The resulting textures are displayed at their logical widths and heights.
-- The four aircraft poses are independently authored fixed silhouettes, with no frame-by-frame pixel animation.
+- Each aircraft pose is a fixed silhouette, not a frame-by-frame animation.
 - Falling bombs with lateral trajectories use a solid torpedo-shaped `angledBomb` mask, rotated toward their left or right drift. Straight-falling bombs and surface-vessel depth charges use the round bomb mask. Sprite choice does not affect projectile physics or hitboxes.
 
 ## Destroyed-vessel glyphs
