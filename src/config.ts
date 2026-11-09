@@ -65,7 +65,7 @@ export function chooseBest(previous: BestRun, candidate: BestRun): BestRun {
 export function speedScale(cycle: number): number {
   return Math.min(2.5, 1 + (cycle - 1) * 0.14);
 }
-export function torpedoUnlocked(cycle: number, stage: StageNumber): boolean {
+export function torpedoUnlocked(_cycle: number, stage: StageNumber): boolean {
   // Torpedoes are available only in submarine stages (x-3).
   return stage === 3;
 }
