@@ -200,12 +200,12 @@ test('G<cycle><stage> warp codes select any cycle and stage', () => {
   assert.deepEqual(advanceWarpCode('', 'Digit1'), { sequence: '', target: null });
 });
 
-test('torpedoes unlock from 1-3 and remain available in later cycles', () => {
-  assert.equal(torpedoUnlocked(1, 1), false);
-  assert.equal(torpedoUnlocked(1, 2), false);
-  assert.equal(torpedoUnlocked(1, 3), true);
-  assert.equal(torpedoUnlocked(2, 1), true);
-  assert.equal(torpedoUnlocked(3, 2), true);
+test('torpedoes are enabled only in the submarine stage of each cycle', () => {
+  for (const cycle of [1, 2, 3]) {
+    assert.equal(torpedoUnlocked(cycle, 1), false);
+    assert.equal(torpedoUnlocked(cycle, 2), false);
+    assert.equal(torpedoUnlocked(cycle, 3), true);
+  }
   assert.equal(canFire('torpedo', true, false), true);
   assert.equal(canFire('missile', false, true), true);
 });
