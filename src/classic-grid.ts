@@ -44,12 +44,6 @@ export function classicHalfHitsCell(
   return Math.floor(halfColumn / 2) === column && Math.floor(halfRow / 2) === row;
 }
 
-/**
- * Check shared-clock movement for two shots travelling in opposite vertical
- * directions. They may occupy the same half-row on this tick OR swap rows
- * between two snapshots (otherwise the alternate half-row parity can cause
- * unavoidable misses). Horizontal forgiveness is exactly one half-column.
- */
 /** Aircraft drops occupy quarter-columns but still hit the same whole player cells. */
 export function classicQuarterHitsCell(
   quarterColumn: number, halfRow: number, column: number, row: number,
@@ -57,6 +51,12 @@ export function classicQuarterHitsCell(
   return Math.floor(quarterColumn / 4) === column && Math.floor(halfRow / 2) === row;
 }
 
+/**
+ * Check shared-clock movement for two shots travelling in opposite vertical
+ * directions. They may occupy the same half-row on this tick OR swap rows
+ * between two snapshots (otherwise the alternate half-row parity can cause
+ * unavoidable misses). Horizontal forgiveness is exactly one half-column.
+ */
 export function classicMissileBombContact(
   missileColumn: number, missileBeforeRow: number, missileAfterRow: number,
   bombColumn: number, bombBeforeRow: number, bombAfterRow: number,
