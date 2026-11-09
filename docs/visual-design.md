@@ -4,10 +4,9 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 
 ## Title screen
 
-- The title screen displays a locally bundled, original-resolution 1672 × 941 WebP rendition of the *Submarine Battle Beneath the Waves* cover illustration, stored at `public/cover.webp`, without cropping it.
-- Two centred buttons sit below the artwork: **Classic — LCD handheld style**, and **Modern — arcade style**. Each full button is tappable; keyboard and mobile mode-selection controls also work.
-- The Casio inspiration attribution and a clickable repository link appear in the menu-only HTML footer. The gameplay footer instead reminds players of the controls.
-- The gameplay canvas retains its sage monochrome LCD design; the cover does not alter gameplay rendering.
+- Display `public/cover.webp` uncropped at its original aspect ratio.
+- Centre **Classic** and **Modern** mode buttons beneath it; both are tappable.
+- Keep the title art separate from the monochrome gameplay canvas.
 
 ## Display
 
@@ -33,7 +32,7 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - Surface escort destroyed: detached bow/gun, displaced bridge/mast and separated aft section; no generic burst.
 - Enemy submarine destroyed: central hull rupture with only two rounded endcaps and a broad scatter of smaller fragments.
 - Player submarine lost: split bow and stern sections, detached sail and several jagged chunks, preserving the original porthole and propeller cues.
-- These four glyphs render in the same dark monochrome LCD ink as the intact ships, held at full opacity for 230 ms and faded over 140 ms. They do not affect collision boxes, scoring, physics or enemy projectiles already in flight. Only projectile-to-projectile interceptions continue to use the original starburst.
+- Enemy debris holds for **230 ms** and fades over **140 ms**. Player submarine debris holds for **690 ms** and fades over **420 ms**; respawn or GAME OVER follows after the glyph clears. Only projectile-to-projectile interceptions use the original starburst.
 
 ## Motion and interaction
 
@@ -42,6 +41,3 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - Missiles travel vertically and torpedoes horizontally. Projectile collisions use logical hitboxes rather than opaque-pixel sampling; see `src/collision.ts` and `src/classic-grid.ts`.
 - Entry sound: three short WebAudio oscillator chirps, one per submarine entry position.
 
-## Credits and sources
-
-The game is inspired by Casio's *Submarine Battle*. The human designer supplied the gameplay and visual direction; the code and custom in-game graphics were generated with AI under the designer's review. No original Casio graphics or sound assets are used.
