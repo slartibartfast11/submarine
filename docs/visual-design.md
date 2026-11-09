@@ -4,8 +4,9 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 
 ## Title screen
 
-- The title screen uses a compact local WebP version of the original *Submarine Battle Beneath the Waves* cover illustration, stored at `public/cover.webp`.
-- Classic and Modern remain tappable on the game canvas and selectable by keyboard or external touch buttons.
+- The title screen displays a locally bundled, high-resolution AVIF rendition of the original *Submarine Battle Beneath the Waves* cover illustration, stored at `public/cover.avif`, without cropping it.
+- Two centred buttons sit below the artwork: **Classic — LCD handheld style**, and **Modern — arcade style**. Each full button is tappable; keyboard and mobile mode-selection controls also work.
+- The Casio inspiration attribution and a clickable repository link appear in the menu-only HTML footer. The gameplay footer instead reminds players of the controls.
 - The gameplay canvas retains its sage monochrome LCD design; the cover does not alter gameplay rendering.
 
 ## Display

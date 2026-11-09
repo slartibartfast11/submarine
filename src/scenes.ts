@@ -90,22 +90,29 @@ export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
 
   preload(): void {
-    this.load.image('coverArt', './cover.webp');
+    this.load.image('coverArt', './cover.avif');
   }
 
   create(): void {
     setControlScreen('menu');
     this.cameras.main.setBackgroundColor(COLOURS.background);
     // The original cover is a static title illustration, not a game sprite.
-    this.add.image(480, 210, 'coverArt').setDisplaySize(744, 419);
+    this.add.image(480, 197, 'coverArt').setDisplaySize(690, 388);
     const frame = this.add.graphics();
-    frame.lineStyle(4, COLOURS.dark, 0.9).strokeRoundedRect(106, 0, 748, 421, 7);
-    frame.fillStyle(COLOURS.dark, 0.94).fillRoundedRect(194, 407, 572, 107, 11);
-    addLabel(this, 261, 424, '1   CLASSIC', 25, '#f7efd6')
-      .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('classic'));
-    addLabel(this, 514, 424, '2   MODERN', 25, '#f7efd6')
-      .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('modern'));
-    addLabel(this, 259, 476, 'TAP A MODE OR PRESS 1 / 2 TO START', 16, '#d5dac8');
+    frame.lineStyle(3, COLOURS.dark, 0.9).strokeRoundedRect(133, 1, 694, 392, 6);
+
+    const modeButton = (x: number, mode: 'classic' | 'modern',
+      number: string, title: string, description: string): void => {
+      const button = this.add.rectangle(x, 451, 276, 80, COLOURS.dark)
+        .setStrokeStyle(2, COLOURS.mid)
+        .setInteractive({ useHandCursor: true });
+      button.on('pointerdown', () => this.startMode(mode));
+      addLabel(this, x, 433, `${number}   ${title}`, 25, '#f7efd6').setOrigin(0.5);
+      addLabel(this, x, 465, description, 15, '#d5dac8').setOrigin(0.5);
+    };
+    modeButton(321, 'classic', '1', 'CLASSIC', 'LCD HANDHELD STYLE');
+    modeButton(639, 'modern', '2', 'MODERN', 'ARCADE STYLE');
+    addLabel(this, 480, 518, 'TAP A MODE OR PRESS 1 / 2', 15).setOrigin(0.5);
     let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
       if (event.repeat) return;

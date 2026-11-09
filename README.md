@@ -6,7 +6,7 @@ Defend your submarine against aircraft, surface ships and enemy submarines. Use 
 
 **[Play Submarine](https://slartibartfast11.github.io/submarine/)** in your browser. No installation required.
 
-The title screen uses the project's original *Submarine Battle Beneath the Waves* cover illustration. All imagery is bundled locally; the game requires no network assets beyond the initial page load.
+The title screen uses the project's original *Submarine Battle Beneath the Waves* cover illustration, with centred Classic (LCD handheld style) and Modern (arcade style) choices. The title-screen footer credits the Casio inspiration and links to the GitHub repository; the gameplay footer shows a controls reminder. All imagery is bundled locally; the game requires no network assets beyond the initial page load.
 
 ## Controls
 

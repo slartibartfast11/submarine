@@ -20,7 +20,11 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
 }
 #game canvas { display: block; image-rendering: auto; }
 .footnote { font-size: 12px; letter-spacing: .02em; font-weight: 600; text-align: center; margin: 14px 0 0; }
-.game-row[data-screen="menu"] ~ .footnote { display: none; }
+.menu-credit { font-size: 12px; letter-spacing: .01em; text-align: center; margin: 14px 0 0; }
+.menu-credit a { color: #26372d; text-underline-offset: 2px; font-weight: 600; }
+.menu-credit a:focus-visible { outline: 2px solid #26372d; outline-offset: 3px; }
+.game-row[data-screen="menu"] ~ .footnote,
+.game-row[data-screen="battle"] ~ .menu-credit { display: none; }
 .touch-dpad, .touch-side, .rotate-hint { display: none; }
 
 @media (any-pointer: coarse) {
@@ -102,7 +106,7 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   .touch-actions .menu-key { font-size: 11px; min-height: 44px; }
   .touch-start .start-key { min-height: 56px; min-width: 122px; }
   .rotate-hint { display: block; margin: 12px 0 0; text-align: center; font-size: 12px; }
-  .footnote { margin-top: 8px; font-size: 10px; }
+  .footnote, .menu-credit { margin-top: 8px; font-size: 10px; }
 }
 
 @media (any-pointer: coarse) and (orientation: landscape) {
@@ -122,5 +126,5 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   .touch-side .touch-key { min-width: 0; width: 100%; padding: 8px 4px; }
   .touch-start, .touch-actions { width: 100%; flex-direction: column; }
   .rotate-hint { display: none; }
-  .footnote { display: block; font-size: 10px; margin: 8px 0 0; }
+  .footnote, .menu-credit { font-size: 10px; margin: 8px 0 0; }
 }
