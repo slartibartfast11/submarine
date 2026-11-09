@@ -182,8 +182,17 @@ test('quarter-column drops retain forgiving missile interception without widenin
   for (const quarter of [13, 14, 15, 16]) {
     assert.equal(classicMissileQuarterBombContact(7, 9, 8, quarter, quarter, 7, 8), true);
   }
-  for (const quarter of [12, 17]) {
-    assert.equal(classicMissileQuarterBombContact(7, 9, 8, quarter, quarter, 7, 8), false);
+  // Both halves of a lethal whole-cell bomb must be interceptable.
+  assert.equal(classicMissileQuarterBombContact(7, 9, 8, 12, 12, 7, 8), true);
+  assert.equal(classicMissileQuarterBombContact(7, 9, 8, 17, 17, 7, 8), false);
+  for (let cell = 0; cell < CLASSIC_COLUMNS; cell++) {
+    for (let half = 0; half < 2; half++) {
+      for (let quarter = 0; quarter < 4; quarter++) {
+        assert.equal(classicMissileQuarterBombContact(
+          cell * 2 + half, 9, 8, cell * 4 + quarter, cell * 4 + quarter, 7, 8,
+        ), true);
+      }
+    }
   }
   // A bomb stepping out of range on the crossing tick is still intercepted.
   assert.equal(classicMissileQuarterBombContact(7, 9, 8, 16, 17, 7, 8), true);
