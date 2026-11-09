@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
   CLASSIC_TORPEDO_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
-  CLASSIC_ROW_Y, ENTRY_STEP_MS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
+  CLASSIC_ROW_Y, COLOURS, ENTRY_STEP_MS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
   advanceWarpCode, canFire, chooseBest, classicPlaneRow, classicTickMs, speedScale,
   planePoseForMotion,
   torpedoUnlocked,
@@ -89,19 +89,23 @@ function drawLandscape(scene: Phaser.Scene): void {
 export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
 
+  preload(): void {
+    this.load.image('coverArt', './cover.webp');
+  }
+
   create(): void {
     setControlScreen('menu');
-    installSprites(this);
-    drawLandscape(this);
-    addLabel(this, 320, 84, 'SUBMARINE', 57);
-    createEtchedImage(this, 315, 354, 'player').setDisplaySize(76*1.8, 30*1.8);
-    createEtchedImage(this, 650, 250, 'plane')
-      .setDisplaySize(76 * 1.45, 38 * 1.45).setFlipX(true);
-    addLabel(this, 335, 392, '1   CLASSIC', 24)
+    this.cameras.main.setBackgroundColor(COLOURS.background);
+    // The original cover is a static title illustration, not a game sprite.
+    this.add.image(480, 210, 'coverArt').setDisplaySize(744, 419);
+    const frame = this.add.graphics();
+    frame.lineStyle(4, COLOURS.dark, 0.9).strokeRoundedRect(106, 0, 748, 421, 7);
+    frame.fillStyle(COLOURS.dark, 0.94).fillRoundedRect(194, 407, 572, 107, 11);
+    addLabel(this, 261, 424, '1   CLASSIC', 25, '#f7efd6')
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('classic'));
-    addLabel(this, 335, 426, '2   MODERN', 24)
+    addLabel(this, 514, 424, '2   MODERN', 25, '#f7efd6')
       .setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startMode('modern'));
-    addLabel(this, 215, 472, 'ARROWS / WASD  MOVE     SPACE  MISSILE     X  TORPEDO', 15);
+    addLabel(this, 259, 476, 'TAP A MODE OR PRESS 1 / 2 TO START', 16, '#d5dac8');
     let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
       if (event.repeat) return;

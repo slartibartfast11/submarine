@@ -2,6 +2,12 @@
 
 For gameplay invariants and implementation ownership, see [the gameplay manifest](manifest.md).
 
+## Title screen
+
+- The title screen uses a compact local WebP version of the original *Submarine Battle Beneath the Waves* cover illustration, stored at `public/cover.webp`.
+- Classic and Modern remain tappable on the game canvas and selectable by keyboard or external touch buttons.
+- The gameplay canvas retains its sage monochrome LCD design; the cover does not alter gameplay rendering.
+
 ## Display
 
 - Logical resolution: **960 × 540** (see `SCREEN` in `src/config.ts`), scaled to fit the browser viewport.
