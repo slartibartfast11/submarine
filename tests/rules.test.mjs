@@ -155,7 +155,7 @@ test('Classic aircraft drops have fixed shallow quarter-column trajectories from
     for (const [pattern, interval] of [['shallow', 4], ['medium', 3], ['steep', 2]]) {
       const expected = (tick - 1) % interval === 0 ? 1 : 0;
       assert.equal(classicBombQuarterStep(pattern, tick, 1), expected, pattern);
-      assert.equal(classicBombQuarterStep(pattern, tick, -1), -expected, pattern);
+      assert.equal(classicBombQuarterStep(pattern, tick, -1), expected === 0 ? 0 : -1, pattern);
     }
   }
   // The same fixed cadence applies above, at, and below the waterline.
