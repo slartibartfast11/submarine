@@ -66,8 +66,8 @@ export function speedScale(cycle: number): number {
   return Math.min(2.5, 1 + (cycle - 1) * 0.14);
 }
 export function torpedoUnlocked(cycle: number, stage: StageNumber): boolean {
-  // The weapon unlocks in game 1-3 and stays available in subsequent cycles.
-  return cycle > 1 || stage === 3;
+  // Torpedoes are available only in submarine stages (x-3).
+  return stage === 3;
 }
 export function canFire(weapon: 'missile' | 'torpedo', airborne: boolean, underwater: boolean): boolean {
   return weapon === 'missile' ? !airborne : !underwater;

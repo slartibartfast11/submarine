@@ -19,7 +19,7 @@ Your submarine moves between **six positions** across the screen and **two depth
 
 - **Bombs** that fall straight down use the round symbol. Angling bombs use a filled torpedo-shaped symbol so their different path is easier to recognise; they do not home in on the submarine.
 - **Missiles** fire straight up. They destroy aircraft and surface ships, and can shoot down falling bombs and depth charges.
-- **Torpedoes** travel sideways and destroy enemy submarines. They become available at stage **1-3** and can also intercept enemy torpedoes.
+- **Torpedoes** travel sideways and destroy enemy submarines. They are available only in the submarine stage (**1-3**, **2-3**, and so on) and can also intercept enemy torpedoes.
 - You can have **one missile and one torpedo in flight at once**. Each must finish its journey before you can fire another of the same kind.
 - Aircraft may drop bombs, surface ships drop depth charges, and enemy submarines fire torpedoes. Some aircraft and enemy submarines pass through without attacking.
 
@@ -33,7 +33,7 @@ In **Classic**, torpedoes aim left or right toward a visible enemy submarine. If
 | **1-2 — Surface Sweepers** | Destroy 4 surface ships |
 | **1-3 — Enemy Submarines** | Destroy 4 enemy submarines |
 
-Each stage adds a new enemy type while keeping the earlier threats. Only the stage's designated enemy advances your progress, but destroying any enemy earns points.
+Each stage adds a new enemy type while keeping the earlier threats. Torpedoes are locked again when the next cycle starts. Only the stage's designated enemy advances your progress, but destroying any enemy earns points. Each successful interception also earns 10 points. You recover one lost submarine every 10,000 points, up to three lives.
 
 After stage 1-3, the stages repeat at a faster pace with higher targets.
 

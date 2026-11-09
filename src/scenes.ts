@@ -14,6 +14,8 @@ import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
 import { droppedBombAppearance } from './drop-appearance';
+import { applyScore, INTERCEPT_POINTS } from './scoring';
+import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
 import {
   keyToControl, setControlScreen, subscribeControls, type GameControl,
@@ -153,6 +155,7 @@ export class BattleScene extends Phaser.Scene {
   private nextEnemySub = 0;
   private lastLaunchX = 0;
   private lastLaunchTime = -100000;
+  private lastPlaneExit: { edge: ScreenEdge; at: number } | null = null;
   private hud!: LcdHud;
   private gameOverHint!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
@@ -178,6 +181,7 @@ export class BattleScene extends Phaser.Scene {
     this.torpedo = null;
     this.playerLives = LIVES;
     this.score = 0;
+    this.lastPlaneExit = null;
     this.state = 'entering';
     this.stageKills = 0;
     this.pendingStageAdvance = false;
@@ -259,6 +263,7 @@ export class BattleScene extends Phaser.Scene {
     this.nextSweeper = 1800;
     this.nextEnemySub = 3000;
     this.lastLaunchTime = -100000;
+    this.lastPlaneExit = null;
   }
 
   private clearBattlefield(): void {
@@ -374,7 +379,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private spawnEnemy(kind: EnemyKind): void {
-    const direction: -1 | 1 = Math.random() < 0.5 ? 1 : -1;
+    const direction: -1 | 1 = kind === 'plane'
+      ? chooseEntryDirection(
+          Math.random(), this.lastPlaneExit?.edge ?? null,
+          this.lastPlaneExit === null ? Infinity : this.elapsed * 1000 - this.lastPlaneExit.at,
+        )
+      : Math.random() < 0.5 ? 1 : -1;
     const isSub = kind === 'sub';
     const airRow = Math.floor(Math.random() * CLASSIC_AIR_ROWS.length);
     const gridColumn = direction === 1 ? 0 : CLASSIC_COLUMNS - 1;
@@ -557,16 +567,26 @@ export class BattleScene extends Phaser.Scene {
     if (shot.owner?.shot === shot) shot.owner.shot = null;
   }
 
+  private awardPoints(points: number): void {
+    const result = applyScore(this.score, this.playerLives, points, LIVES);
+    this.score = result.score;
+    this.playerLives = result.lives;
+    sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
+    this.drawHud();
+  }
+
   private removeEnemy(enemy: Enemy, destroyed: boolean): void {
     this.enemies = this.enemies.filter((e) => e !== enemy);
+    if (enemy.kind === 'plane' && !destroyed) {
+      this.lastPlaneExit = { edge: exitEdge(enemy.direction), at: this.elapsed * 1000 };
+    }
     enemy.image.destroy();
     if (enemy.kind === 'sub') {
       this.nextEnemySub = this.elapsed * 1000 + 1400 + Math.random() * 1800;
     }
     if (destroyed) {
-      this.score += enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200;
+      this.awardPoints(enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200);
       this.explode(enemy.x, enemy.y);
-      sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
       if (enemy.kind === stageTarget(this.stage)) {
         this.stageKills++;
         if (this.stageKills >= stageGoal(this.cycle, this.stage)) this.pendingStageAdvance = true;
@@ -799,6 +819,7 @@ export class BattleScene extends Phaser.Scene {
           assisted ? other.y : (shot.y + other.y) / 2);
         this.destroyShot(shot);
         this.destroyShot(other);
+        this.awardPoints(INTERCEPT_POINTS);
       }
     }
 
@@ -819,6 +840,7 @@ export class BattleScene extends Phaser.Scene {
         this.explode((friendly.x + opposing.x) / 2, (friendly.y + opposing.y) / 2);
         this.destroyShot(friendly);
         this.destroyShot(opposing);
+        this.awardPoints(INTERCEPT_POINTS);
       }
     }
 

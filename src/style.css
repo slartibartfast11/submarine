@@ -19,7 +19,8 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   box-shadow: 0 5px 0 #869487;
 }
 #game canvas { display: block; image-rendering: auto; }
-.footnote { font-size: 11px; letter-spacing: .02em; text-align: center; margin: 14px 0 0; }
+.footnote { font-size: 12px; letter-spacing: .02em; font-weight: 600; text-align: center; margin: 14px 0 0; }
+.game-row[data-screen="menu"] ~ .footnote { display: none; }
 .touch-dpad, .touch-side, .rotate-hint { display: none; }
 
 @media (any-pointer: coarse) {
@@ -120,5 +121,6 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   .touch-side { width: clamp(94px, 15vw, 135px); }
   .touch-side .touch-key { min-width: 0; width: 100%; padding: 8px 4px; }
   .touch-start, .touch-actions { width: 100%; flex-direction: column; }
-  .rotate-hint, .footnote { display: none; }
+  .rotate-hint { display: none; }
+  .footnote { display: block; font-size: 10px; margin: 8px 0 0; }
 }

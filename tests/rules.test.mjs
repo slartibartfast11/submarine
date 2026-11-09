@@ -46,6 +46,10 @@ test('stage advances through kill objectives, never by waiting', () => {
   assert.equal(stageGoal(1, 1), 8);
   assert.equal(stageGoal(1, 2), 4);
   assert.equal(stageGoal(1, 3), 4);
+  assert.equal(torpedoUnlocked(1, 3), true);
+  assert.equal(torpedoUnlocked(2, 1), false);
+  assert.equal(torpedoUnlocked(2, 2), false);
+  assert.equal(torpedoUnlocked(2, 3), true);
   assert.ok(stageGoal(2, 1) > stageGoal(1, 1));
 });
 test('session best records the stage of the new high score, not furthest stage', () => {

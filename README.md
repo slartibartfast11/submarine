@@ -13,7 +13,7 @@ Defend your submarine against aircraft, surface ships and enemy submarines. Use 
 | `1` / `2` | Start **Classic** / **Modern** |
 | Arrow keys / `W A S D` | Move between six positions and two depths |
 | `Space` | Fire a missile |
-| `X` | Fire a torpedo (unlocks at stage 1-3) |
+| `X` | Fire a torpedo (stage 3 of each cycle) |
 | `Esc` | Main menu |
 
 On phones and tablets, use the on-screen direction pad and weapon buttons; tap **Classic** or **Modern** to start. Hold left or right to move through multiple columns. Landscape orientation gives the largest playfield. Keyboard controls remain available on devices with a keyboard.
