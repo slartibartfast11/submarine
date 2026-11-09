@@ -1,6 +1,6 @@
 # How to play
 
-**Submarine** is a game of shooting down attackers and surviving long enough to clear each stage.
+**Submarine** is about defending your submarine and destroying enough targets to clear each stage.
 
 ## Controls
 
