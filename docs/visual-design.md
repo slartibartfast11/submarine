@@ -21,10 +21,19 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 
 - `src/curved-art.ts`: player submarine, enemy submarine, surface escort and bombs. Each sprite defines filled and transparent `Path2D` shapes with Bézier curves.
 - `src/lcd-segments.ts`: polygon-defined aircraft, missile, torpedo and filled directional-drop masks. Aircraft textures are `plane` (level profile), `planeBankRight`, `planeBankLeft` and `planeClimb` (oblique underside).
-- `src/sprite-masks.ts`: the one remaining square-pixel mask, used for the impact starburst.
+- `src/debris-art.ts`: four dedicated destroyed-vessel Path2D etches, based on the approved Debris B concepts (particulate aircraft and enemy submarine, three-part surface escort, and broken player submarine).
+- `src/sprite-masks.ts`: the one remaining square-pixel mask, reserved for projectile-interception starbursts.
 - `src/sprites.ts`: rasterises curved paths and polygons at **3×** logical sprite resolution. The resulting textures are displayed at their logical widths and heights.
 - The four aircraft poses are independently authored fixed silhouettes, with no frame-by-frame pixel animation.
 - Falling bombs with lateral trajectories use a solid torpedo-shaped `angledBomb` mask, rotated toward their left or right drift. Straight-falling bombs and surface-vessel depth charges use the round bomb mask. Sprite choice does not affect projectile physics or hitboxes.
+
+## Destroyed-vessel glyphs
+
+- Aircraft destroyed: nearly all recognizable airframe disappears into a ragged cloud of distinct small fragments, with only tiny nose/tail remnants.
+- Surface escort destroyed: detached bow/gun, displaced bridge/mast and separated aft section; no generic burst.
+- Enemy submarine destroyed: central hull rupture with only two rounded endcaps and a broad scatter of smaller fragments.
+- Player submarine lost: split bow and stern sections, detached sail and several jagged chunks, preserving the original porthole and propeller cues.
+- These four glyphs render in the same dark monochrome LCD ink as the intact ships, held at full opacity for 230 ms and faded over 140 ms. They do not affect collision boxes, scoring, physics or enemy projectiles already in flight. Only projectile-to-projectile interceptions continue to use the original starburst.
 
 ## Motion and interaction
 
