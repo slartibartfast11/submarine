@@ -8,10 +8,10 @@ test('Classic straight bombs retain the existing bomb silhouette', () => {
   assert.deepEqual(droppedBombAppearance('straight', -1), { texture: 'bomb', angle: 0 });
 });
 
-test('Classic diagonal and water-hook bombs use a directional filled mask', () => {
-  for (const flight of ['diagonal', 'water-hook']) {
-    assert.deepEqual(droppedBombAppearance(flight, 1), { texture: 'angledBomb', angle: 60 });
-    assert.deepEqual(droppedBombAppearance(flight, -1), { texture: 'angledBomb', angle: 120 });
+test('Classic torpedo sprites point along their fixed shallow trajectories', () => {
+  for (const [flight, angle] of [['shallow', 70], ['medium', 65], ['steep', 55]]) {
+    assert.deepEqual(droppedBombAppearance(flight, 1), { texture: 'angledBomb', angle });
+    assert.deepEqual(droppedBombAppearance(flight, -1), { texture: 'angledBomb', angle: 180 - angle });
   }
 });
 

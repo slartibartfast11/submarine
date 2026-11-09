@@ -15,7 +15,9 @@ export function droppedBombAppearance(
   const angled = flight === null
     ? Math.abs(lateralDirection) > 6
     : flight !== 'straight';
-  return angled
-    ? { texture: 'angledBomb', angle: lateralDirection < 0 ? 120 : 60 }
-    : { texture: 'bomb', angle: 0 };
+  if (!angled) return { texture: 'bomb', angle: 0 };
+  // Shallower paths point more downward; Modern keeps its existing 60° mask.
+  const angle = flight === 'shallow' ? 70 : flight === 'medium' ? 65 :
+    flight === 'steep' ? 55 : 60;
+  return { texture: 'angledBomb', angle: lateralDirection < 0 ? 180 - angle : angle };
 }
