@@ -78,6 +78,11 @@ export function classicMissileQuarterBombContact(
   bombBeforeRow: number, bombAfterRow: number,
 ): boolean {
   if (missileBeforeRow < bombBeforeRow || missileAfterRow > bombAfterRow) return false;
+  // A bomb lethal anywhere in the missile's whole cell must be interceptable
+  // from either half of that cell; keep the existing adjacent-cell tolerance.
+  const missileCell = Math.floor(missileColumn / 2);
+  if (Math.floor(bombBeforeQuarter / 4) === missileCell ||
+      Math.floor(bombAfterQuarter / 4) === missileCell) return true;
   const missileX = classicHalfColumnX(missileColumn);
   const bombBeforeX = classicQuarterColumnX(bombBeforeQuarter);
   const bombAfterX = classicQuarterColumnX(bombAfterQuarter);
