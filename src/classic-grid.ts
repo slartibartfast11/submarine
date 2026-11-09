@@ -3,10 +3,11 @@ import {
   PLAYER_COLUMNS, SCREEN,
 } from './config.ts';
 
-/** Six full columns × six rows. Projectiles occupy twelve half-cells per axis. */
+/** Six full columns × six rows. Missiles use half-cells; aircraft drops use quarter-columns. */
 export const CLASSIC_COLUMNS = 6;
 export const CLASSIC_ROWS = 6;
 export const CLASSIC_HALF_COLUMNS = CLASSIC_COLUMNS * 2;
+export const CLASSIC_QUARTER_COLUMNS = CLASSIC_COLUMNS * 4;
 export const CLASSIC_HALF_ROWS = CLASSIC_ROWS * 2;
 export const CLASSIC_SURFACE_ROW = 3;
 export const CLASSIC_SUB_ROWS = [4, 5] as const;
@@ -18,6 +19,13 @@ export function classicHalfColumnX(halfColumn: number): number {
   // The two projectile slots are the fore and aft halves of a full cell.
   const centre = PLAYER_COLUMNS[Math.max(0, Math.min(CLASSIC_COLUMNS - 1, column))];
   return centre + (halfColumn % 2 === 0 ? -1 : 1) * CLASSIC_CELL_WIDTH / 4;
+}
+
+/** Evenly spaced quarter-column positions, centred inside each whole cell. */
+export function classicQuarterColumnX(quarterColumn: number): number {
+  const column = Math.floor(quarterColumn / 4);
+  const centre = PLAYER_COLUMNS[Math.max(0, Math.min(CLASSIC_COLUMNS - 1, column))];
+  return centre + (quarterColumn % 4 - 1.5) * CLASSIC_CELL_WIDTH / 4;
 }
 
 export function classicHalfRowY(halfRow: number): number {
@@ -36,6 +44,13 @@ export function classicHalfHitsCell(
   return Math.floor(halfColumn / 2) === column && Math.floor(halfRow / 2) === row;
 }
 
+/** Aircraft drops occupy quarter-columns but still hit the same whole player cells. */
+export function classicQuarterHitsCell(
+  quarterColumn: number, halfRow: number, column: number, row: number,
+): boolean {
+  return Math.floor(quarterColumn / 4) === column && Math.floor(halfRow / 2) === row;
+}
+
 /**
  * Check shared-clock movement for two shots travelling in opposite vertical
  * directions. They may occupy the same half-row on this tick OR swap rows
@@ -50,6 +65,26 @@ export function classicMissileBombContact(
   const wereSeparatedWithMissileBelow = missileBeforeRow >= bombBeforeRow;
   const nowMissileAboveOrLevel = missileAfterRow <= bombAfterRow;
   return wereSeparatedWithMissileBelow && nowMissileAboveOrLevel;
+}
+
+/**
+ * Half-column player missiles can intercept quarter-column aircraft drops.
+ * Preserve the original half-cell horizontal forgiveness (75 logical pixels),
+ * including a bomb's sideways step between consecutive LCD snapshots.
+ */
+export function classicMissileQuarterBombContact(
+  missileColumn: number, missileBeforeRow: number, missileAfterRow: number,
+  bombBeforeQuarter: number, bombAfterQuarter: number,
+  bombBeforeRow: number, bombAfterRow: number,
+): boolean {
+  if (missileBeforeRow < bombBeforeRow || missileAfterRow > bombAfterRow) return false;
+  const missileX = classicHalfColumnX(missileColumn);
+  const bombBeforeX = classicQuarterColumnX(bombBeforeQuarter);
+  const bombAfterX = classicQuarterColumnX(bombAfterQuarter);
+  const left = Math.min(bombBeforeX, bombAfterX);
+  const right = Math.max(bombBeforeX, bombAfterX);
+  return missileX >= left - CLASSIC_CELL_WIDTH / 2 &&
+    missileX <= right + CLASSIC_CELL_WIDTH / 2;
 }
 
 /** Classic auto-targets a visible submarine; otherwise fire in last facing. */
@@ -128,54 +163,58 @@ export function dynamicSubDepthProgress(ageMs: number, pattern: SubPattern): num
   return (ageMs - 1400) / 300;
 }
 
-export type ClassicBombFlight = 'straight' | 'diagonal' | 'water-hook';
+export type ClassicBombFlight = 'straight' | 'shallow' | 'medium' | 'steep';
 
 // Reconnaissance flights cannot release bombs; attack flights allow two active bombs.
 export function classicPlaneCanRelease(reconnaissance: boolean, activeBombs: number): boolean {
   return !reconnaissance && activeBombs < 2;
 }
 
-/** Assign a bomb's fixed trajectory: straight, diagonal or waterline turn. */
+/** Fixed at launch: vertical bomb or one of three shallow torpedo trajectories. */
 export function classicBombFlight(randomValue: number): ClassicBombFlight {
-  return randomValue < 0.45 ? 'straight' : randomValue < 0.70 ? 'diagonal' : 'water-hook';
-}
-
-export function classicBombLateralStep(
-  pattern: ClassicBombFlight, halfRow: number, flightTick: number, direction: -1 | 1,
-): number {
-  if (pattern === 'straight') return 0;
-  if (pattern === 'water-hook' && halfRow < CLASSIC_SURFACE_ROW * 2) return 0;
-  // Move a half-column sideways every two downward half-row steps.
-  return flightTick % 2 === 0 ? direction : 0;
+  if (randomValue < 0.45) return 'straight';
+  if (randomValue < 0.65) return 'shallow';
+  if (randomValue < 0.85) return 'medium';
+  return 'steep';
 }
 
 /**
- * A vertical missile can intercept a diagonal bomb from an adjacent whole
- * cell if the bomb's existing path threatens the current player position.
- * This does not alter projectile trajectories or ordinary collision bounds.
+ * Falling torpedoes advance one QUARTER-column every 4, 3 or 2 half-row ticks.
+ * The first sideways step occurs on the first tick, so there is no waterline
+ * turn or sudden change of course. A shot's pattern and direction never change.
+ */
+export function classicBombQuarterStep(
+  pattern: ClassicBombFlight, flightTick: number, direction: -1 | 1,
+): number {
+  if (pattern === 'straight') return 0;
+  const interval = pattern === 'shallow' ? 4 : pattern === 'medium' ? 3 : 2;
+  return (flightTick - 1) % interval === 0 ? direction : 0;
+}
+
+/**
+ * A vertical missile may intercept an incoming torpedo from the adjacent
+ * whole cell if its fixed quarter-column trajectory threatens the player.
+ * This is a short-range firing assist; it never steers either projectile.
  */
 export function classicAdjacentBombThreat(
-  halfColumn: number, halfRow: number, pattern: ClassicBombFlight,
+  quarterColumn: number, halfRow: number, pattern: ClassicBombFlight,
   ticksInFlight: number, driftDirection: -1 | 1,
   playerColumn: number, playerRow: number,
 ): boolean {
   if (pattern === 'straight') return false;
-  const bombColumn = Math.floor(halfColumn / 2);
+  const bombColumn = Math.floor(quarterColumn / 4);
   if (Math.abs(bombColumn - playerColumn) !== 1) return false;
   if (driftDirection !== (playerColumn < bombColumn ? -1 : 1)) return false;
   const playerTop = playerRow * 2;
-  // The threat must be beside the sub or in the immediately higher row.
   if (halfRow < playerTop - 2 || halfRow > playerTop + 1) return false;
 
-  let col = halfColumn;
+  let col = quarterColumn;
   let row = halfRow;
-  // A strictly local emergency window; not an across-screen defence.
   for (let tick = 1; tick <= 3; tick++) {
     row++;
-    col += classicBombLateralStep(pattern, row, ticksInFlight + tick, driftDirection);
-    if (row >= CLASSIC_HALF_ROWS || col < 0 || col >= CLASSIC_HALF_COLUMNS) break;
-    if (classicHalfHitsCell(col, row, playerColumn, playerRow)) return true;
+    col += classicBombQuarterStep(pattern, ticksInFlight + tick, driftDirection);
+    if (row >= CLASSIC_HALF_ROWS || col < 0 || col >= CLASSIC_QUARTER_COLUMNS) break;
+    if (classicQuarterHitsCell(col, row, playerColumn, playerRow)) return true;
   }
   return false;
 }
-

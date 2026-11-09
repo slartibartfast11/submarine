@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import {
   CLASSIC_COLUMNS, CLASSIC_ROWS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
-  CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
-  classicHalfHitsCell, classicMissileBombContact, classicSubAction,
+  CLASSIC_QUARTER_COLUMNS, CLASSIC_SURFACE_ROW, classicHalfColumnX, classicHalfRowY,
+  classicQuarterColumnX, classicHalfHitsCell, classicQuarterHitsCell,
+  classicMissileBombContact, classicMissileQuarterBombContact, classicSubAction,
   classicTorpedoDirection, classicTorpedoY, classicTorpedoesContact,
   chooseSubPattern, dynamicSubAction, dynamicSubDepthProgress,
   classicPlaneCanRelease,
-  classicBombFlight, classicBombLateralStep, classicAdjacentBombThreat,
+  classicBombFlight, classicBombQuarterStep, classicAdjacentBombThreat,
 } from '../src/classic-grid.ts';
 import assert from 'node:assert/strict';
 import {
@@ -27,6 +28,7 @@ test('shared Classic playfield has six columns and six logical rows', () => {
   assert.equal(CLASSIC_ROWS, 6);
   assert.equal(CLASSIC_SURFACE_ROW, 3);
   assert.equal(CLASSIC_HALF_COLUMNS, 12);
+  assert.equal(CLASSIC_QUARTER_COLUMNS, 24);
   assert.equal(CLASSIC_HALF_ROWS, 12);
   assert.equal(PLAYER_COLUMNS[2], 405);
 });
@@ -106,6 +108,21 @@ test('half-cell coordinates are ordered and stay inside the field', () => {
   }
   for (let row = 0; row < 11; row++) assert.ok(classicHalfRowY(row + 1) > classicHalfRowY(row));
 });
+test('quarter-column positions are evenly spaced and cover the original whole cells', () => {
+  for (let q = 0; q < CLASSIC_QUARTER_COLUMNS - 1; q++) {
+    assert.equal(classicQuarterColumnX(q + 1) - classicQuarterColumnX(q),
+      CLASSIC_CELL_WIDTH / 4);
+  }
+  for (let col = 0; col < CLASSIC_COLUMNS; col++) {
+    assert.equal((classicQuarterColumnX(col * 4) + classicQuarterColumnX(col * 4 + 1)) / 2,
+      classicHalfColumnX(col * 2));
+    assert.equal((classicQuarterColumnX(col * 4 + 2) + classicQuarterColumnX(col * 4 + 3)) / 2,
+      classicHalfColumnX(col * 2 + 1));
+    for (let sub = 0; sub < 4; sub++) {
+      assert.equal(classicQuarterHitsCell(col * 4 + sub, 9, col, 4), true);
+    }
+  }
+});
 test('Classic sub appears, attacks, changes depth, may attack again then vanishes', () => {
   assert.equal(classicSubAction(1, 0), 'wait');
   assert.equal(classicSubAction(4, 0), 'fire');
@@ -128,35 +145,50 @@ test('Classic reconnaissance flights do not release bombs', () => {
   assert.equal(classicPlaneCanRelease(false, 1), true);
   assert.equal(classicPlaneCanRelease(false, 2), false);
 });
-test('Classic bombs may descend vertically or angle at fixed half-cell intervals', () => {
+test('Classic aircraft drops have fixed shallow quarter-column trajectories from launch', () => {
   assert.equal(classicBombFlight(0.2), 'straight');
-  assert.equal(classicBombFlight(0.6), 'diagonal');
-  assert.equal(classicBombFlight(0.9), 'water-hook');
-  assert.equal(classicBombLateralStep('straight', 8, 2, 1), 0);
-  assert.equal(classicBombLateralStep('diagonal', 4, 2, -1), -1);
-  assert.equal(classicBombLateralStep('diagonal', 5, 3, 1), 0);
-  assert.equal(classicBombLateralStep('water-hook', 5, 4, 1), 0);
-  assert.equal(classicBombLateralStep('water-hook', 6, 4, 1), 1);
-  assert.equal(classicBombLateralStep('water-hook', 7, 5, 1), 0);
+  assert.equal(classicBombFlight(0.60), 'shallow');
+  assert.equal(classicBombFlight(0.78), 'medium');
+  assert.equal(classicBombFlight(0.95), 'steep');
+  for (let tick = 1; tick <= 12; tick++) {
+    assert.equal(classicBombQuarterStep('straight', tick, 1), 0);
+    for (const [pattern, interval] of [['shallow', 4], ['medium', 3], ['steep', 2]]) {
+      const expected = (tick - 1) % interval === 0 ? 1 : 0;
+      assert.equal(classicBombQuarterStep(pattern, tick, 1), expected, pattern);
+      assert.equal(classicBombQuarterStep(pattern, tick, -1), -expected, pattern);
+    }
+  }
+  // The same fixed cadence applies above, at, and below the waterline.
+  assert.equal(classicBombQuarterStep('shallow', 5, 1), 1);
+  assert.equal(classicBombQuarterStep('shallow', 6, 1), 0);
 });
 
-test('Classic missile emergency interception catches an adjacent incoming diagonal bomb', () => {
-  // Player at column 3 (zero-based 2), upper depth row 4; bomb in adjacent
-  // left-hand cell, dropping diagonally into the player's cell next tick.
-  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, 1, 2, 4), true);
-  // Mirrors correctly for a bomb approaching from the right.
-  assert.equal(classicAdjacentBombThreat(6, 7, 'diagonal', 1, -1, 2, 4), true);
-  // Applies to the lower submarine depth too.
-  assert.equal(classicAdjacentBombThreat(3, 9, 'water-hook', 1, 1, 2, 5), true);
+test('Emergency interception follows the new quarter-column approach only when threatening', () => {
+  // Player at column 2 (zero-based); quarter-column 7 is in the next
+  // whole cell to the left and crosses into our cell on the next tick.
+  assert.equal(classicAdjacentBombThreat(7, 7, 'shallow', 0, 1, 2, 4), true);
+  assert.equal(classicAdjacentBombThreat(12, 7, 'medium', 0, -1, 2, 4), true);
+  assert.equal(classicAdjacentBombThreat(7, 9, 'steep', 0, 1, 2, 5), true);
+  assert.equal(classicAdjacentBombThreat(7, 7, 'straight', 0, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(7, 7, 'shallow', 0, -1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(3, 7, 'shallow', 0, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(5, 7, 'shallow', 0, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(7, 4, 'shallow', 0, 1, 2, 4), false);
+  assert.equal(classicAdjacentBombThreat(8, 7, 'shallow', 0, 1, 2, 4), false);
 });
-test('Emergency assist cannot clear harmless, distant or vertical bombs', () => {
-  assert.equal(classicAdjacentBombThreat(3, 7, 'straight', 1, 1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, -1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(1, 7, 'diagonal', 1, 1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(3, 4, 'diagonal', 1, 1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(2, 7, 'diagonal', 1, 1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(4, 7, 'diagonal', 1, 1, 2, 4), false);
-  assert.equal(classicAdjacentBombThreat(3, 7, 'diagonal', 1, 1, 2, 5), false);
+
+test('quarter-column drops retain forgiving missile interception without widening it', () => {
+  // A half-column 7 missile is at x=592.5: bombs 13..16 fall within 75px.
+  for (const quarter of [13, 14, 15, 16]) {
+    assert.equal(classicMissileQuarterBombContact(7, 9, 8, quarter, quarter, 7, 8), true);
+  }
+  for (const quarter of [12, 17]) {
+    assert.equal(classicMissileQuarterBombContact(7, 9, 8, quarter, quarter, 7, 8), false);
+  }
+  // A bomb stepping out of range on the crossing tick is still intercepted.
+  assert.equal(classicMissileQuarterBombContact(7, 9, 8, 16, 17, 7, 8), true);
+  assert.equal(classicMissileQuarterBombContact(7, 9, 8, 17, 18, 7, 8), false);
+  assert.equal(classicMissileQuarterBombContact(7, 9, 8, 15, 15, 3, 4), false);
 });
 
 test('Classic upward missiles intercept bombs one half-column to either side', () => {

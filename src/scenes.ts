@@ -21,12 +21,13 @@ import {
   keyToControl, setControlScreen, setPauseOpen, subscribeControls, type GameControl,
 } from './controls';
 import {
-  CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
-  CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX,
-  classicHalfRowY, classicHalfHitsCell, classicMissileBombContact,
+  CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS, CLASSIC_QUARTER_COLUMNS,
+  CLASSIC_SURFACE_ROW, CLASSIC_SUB_ROWS, classicHalfColumnX, classicQuarterColumnX,
+  classicHalfRowY, classicHalfHitsCell, classicQuarterHitsCell, classicMissileBombContact,
+  classicMissileQuarterBombContact,
   classicSubAction, classicTorpedoDirection, classicTorpedoY,
   classicTorpedoesContact, chooseSubPattern, dynamicSubAction, dynamicSubDepthProgress,
-  classicBombFlight, classicBombLateralStep, classicPlaneCanRelease,
+  classicBombFlight, classicBombQuarterStep, classicPlaneCanRelease,
   classicAdjacentBombThreat, type ClassicBombFlight, type SubPattern,
 } from './classic-grid';
 
@@ -71,6 +72,8 @@ type Shot = {
   vy: number;
   owner: Enemy | null;
   halfColumn: number;
+  quarterColumn: number;
+  prevQuarterColumn: number;
   halfRow: number;
   stepColumn: number;
   stepRow: number;
@@ -468,7 +471,8 @@ export class BattleScene extends Phaser.Scene {
     const shot: Shot = {
       kind, image: createEtchedImage(this, x, y, texture).setDepth(4),
       x, y, prevX: x, prevY: y, vx, vy, owner,
-      halfColumn: -1, halfRow: -1, stepColumn: 0, stepRow: 0,
+      halfColumn: -1, quarterColumn: -1, prevQuarterColumn: -1,
+      halfRow: -1, stepColumn: 0, stepRow: 0,
       bombFlight: 'straight', driftDirection: 1, ticksInFlight: 0,
       emergencyIntercept: null,
       prevHalfColumn: -1,
@@ -518,7 +522,7 @@ export class BattleScene extends Phaser.Scene {
       // arm an emergency interception for the next shared clock tick.
       this.missile.emergencyIntercept = this.shots.find((shot) =>
         shot.kind === 'bomb' && classicAdjacentBombThreat(
-          shot.halfColumn, shot.halfRow, shot.bombFlight,
+          shot.quarterColumn, shot.halfRow, shot.bombFlight,
           shot.ticksInFlight, shot.driftDirection, this.columns, 4 + this.depth,
         ),
       ) ?? null;
@@ -575,6 +579,12 @@ export class BattleScene extends Phaser.Scene {
       const shot = this.addClassicShot(kind, halfColumn, enemy.gridRow * 2 + 1,
         horizontal, vertical, enemy);
       if (enemy.kind === 'plane') {
+        // Start near the centre of the releasing aircraft's cell, rather than
+        // jumping a half-column sideways on the first rendered frame.
+        shot.quarterColumn = halfColumn * 2 + (halfColumn % 2 === 0 ? 1 : 0);
+        shot.prevQuarterColumn = shot.quarterColumn;
+        shot.x = classicQuarterColumnX(shot.quarterColumn);
+        shot.image.setPosition(shot.x, shot.y);
         shot.bombFlight = classicBombFlight(Math.random());
         shot.driftDirection = Math.random() < 0.5 ? -1 : 1;
         this.setBombAppearance(shot, shot.bombFlight, shot.driftDirection);
@@ -819,22 +829,28 @@ export class BattleScene extends Phaser.Scene {
       if (this.mode === 'classic') {
         shot.ticksInFlight++;
         shot.prevHalfColumn = shot.halfColumn;
+        shot.prevQuarterColumn = shot.quarterColumn;
         shot.halfRow += shot.stepRow;
         const isTorpedo = shot.kind === 'torpedo' || shot.kind === 'enemyTorpedo';
         if (!isTorpedo || shot.ticksInFlight % CLASSIC_TORPEDO_MOVE_TICKS === 0) {
           shot.halfColumn += shot.stepColumn;
         }
         if (shot.kind === 'bomb') {
-          shot.halfColumn += classicBombLateralStep(
-            shot.bombFlight, shot.halfRow, shot.ticksInFlight, shot.driftDirection,
+          shot.quarterColumn += classicBombQuarterStep(
+            shot.bombFlight, shot.ticksInFlight, shot.driftDirection,
           );
+          shot.halfColumn = Math.floor(shot.quarterColumn / 2);
         }
-        if (shot.halfColumn < 0 || shot.halfColumn >= CLASSIC_HALF_COLUMNS ||
-            shot.halfRow < 0 || shot.halfRow >= CLASSIC_HALF_ROWS) {
+        const outsideColumns = shot.kind === 'bomb'
+          ? shot.quarterColumn < 0 || shot.quarterColumn >= CLASSIC_QUARTER_COLUMNS
+          : shot.halfColumn < 0 || shot.halfColumn >= CLASSIC_HALF_COLUMNS;
+        if (outsideColumns || shot.halfRow < 0 || shot.halfRow >= CLASSIC_HALF_ROWS) {
           this.destroyShot(shot);
           continue;
         }
-        shot.x = classicHalfColumnX(shot.halfColumn);
+        shot.x = shot.kind === 'bomb'
+          ? classicQuarterColumnX(shot.quarterColumn)
+          : classicHalfColumnX(shot.halfColumn);
         shot.y = isTorpedo ? classicTorpedoY(shot.halfRow) : classicHalfRowY(shot.halfRow);
       } else {
         shot.x += shot.vx * dt;
@@ -852,10 +868,16 @@ export class BattleScene extends Phaser.Scene {
       const other = assisted ?? this.shots.find((candidate) =>
         (candidate.kind === 'bomb' || candidate.kind === 'charge') &&
         (this.mode === 'classic'
-          ? classicMissileBombContact(
-            shot.halfColumn, shot.halfRow - shot.stepRow, shot.halfRow,
-            candidate.halfColumn, candidate.halfRow - candidate.stepRow, candidate.halfRow,
-          )
+          ? candidate.kind === 'bomb'
+            ? classicMissileQuarterBombContact(
+              shot.halfColumn, shot.halfRow - shot.stepRow, shot.halfRow,
+              candidate.prevQuarterColumn, candidate.quarterColumn,
+              candidate.halfRow - candidate.stepRow, candidate.halfRow,
+            )
+            : classicMissileBombContact(
+              shot.halfColumn, shot.halfRow - shot.stepRow, shot.halfRow,
+              candidate.halfColumn, candidate.halfRow - candidate.stepRow, candidate.halfRow,
+            )
           : sweptBoxesOverlap(
             this.shotBox(shot, true), this.shotBox(shot),
             this.shotBox(candidate, true), this.shotBox(candidate),
@@ -903,7 +925,9 @@ export class BattleScene extends Phaser.Scene {
           continue;
         }
       } else if (this.mode === 'classic'
-        ? classicHalfHitsCell(shot.halfColumn, shot.halfRow, this.columns, 4 + this.depth)
+        ? shot.kind === 'bomb'
+          ? classicQuarterHitsCell(shot.quarterColumn, shot.halfRow, this.columns, 4 + this.depth)
+          : classicHalfHitsCell(shot.halfColumn, shot.halfRow, this.columns, 4 + this.depth)
         : sweptBoxesOverlap(
           this.shotBox(shot, true), this.shotBox(shot),
           { x: PLAYER_COLUMNS[this.columns], y: PLAYER_DEPTHS[this.depth], width: 76, height: 26 },
