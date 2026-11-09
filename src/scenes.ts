@@ -181,6 +181,7 @@ export class BattleScene extends Phaser.Scene {
   private startWarp: StagePosition | null = null;
   private entryTone: OscillatorNode | null = null;
   private paused = false;
+  private entryGeneration = 0;
 
   constructor() { super('battle'); }
 
@@ -190,6 +191,7 @@ export class BattleScene extends Phaser.Scene {
     this.warpSequence = '';
     this.entryTone = null;
     this.paused = false;
+    this.entryGeneration = 0;
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -358,6 +360,7 @@ export class BattleScene extends Phaser.Scene {
   private beginEntry(): void {
     // Every new submarine enters on the lower lane: 5 -> 4 -> 3, then controls unlock.
     this.state = 'entering';
+    const generation = ++this.entryGeneration;
     this.stageKills = 0;
     this.pendingStageAdvance = false;
     this.resetSpawns();
@@ -370,19 +373,19 @@ export class BattleScene extends Phaser.Scene {
     this.drawHud();
     this.playEntryChirp(0);
     this.time.delayedCall(ENTRY_STEP_MS, () => {
-      if (this.state !== 'entering') return;
+      if (this.state !== 'entering' || generation !== this.entryGeneration) return;
       this.columns = 3;
       this.player.x = PLAYER_COLUMNS[3];
       this.playEntryChirp(1);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 2, () => {
-      if (this.state !== 'entering') return;
+      if (this.state !== 'entering' || generation !== this.entryGeneration) return;
       this.columns = 2;
       this.player.x = PLAYER_COLUMNS[2];
       this.playEntryChirp(2);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 3, () => {
-      if (this.state !== 'entering') return;
+      if (this.state !== 'entering' || generation !== this.entryGeneration) return;
       this.state = 'playing';
     });
   }
@@ -394,6 +397,7 @@ export class BattleScene extends Phaser.Scene {
       try { this.entryTone.stop(); } catch { /* Audio may have already stopped. */ }
       this.entryTone = null;
     }
+    ++this.entryGeneration;
     this.clearBattlefield();
     this.cycle = target.cycle;
     this.stage = target.stage;
@@ -480,7 +484,8 @@ export class BattleScene extends Phaser.Scene {
       emergencyIntercept: null,
       prevHalfColumn: -1,
     };
-    shot.image.setFlipX(vx < 0);
+    // Bomb direction is encoded by setBombAppearance's rotation, not a second flip.
+    shot.image.setFlipX(kind !== 'bomb' && vx < 0);
     this.shots.push(shot);
     if (owner) {
       // Unlike enemy torpedoes, Classic aircraft bombs may overlap in flight.
@@ -644,7 +649,10 @@ export class BattleScene extends Phaser.Scene {
     const debrisFlipX = enemy.image.flipX;
     enemy.image.destroy();
     if (enemy.kind === 'sub') {
-      this.nextEnemySub = this.elapsed * 1000 + 1400 + Math.random() * 1800;
+      const scale = speedScale(this.cycle);
+      this.nextEnemySub = this.elapsed * 1000 + (this.mode === 'classic'
+        ? 7000 + Math.random() * 1400
+        : (5500 + Math.random() * 1500) / scale);
     }
     if (destroyed) {
       this.awardPoints(enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200);
@@ -670,6 +678,8 @@ export class BattleScene extends Phaser.Scene {
   private showDebris(x: number, y: number, texture: string, flipX = false): void {
     const debris = createEtchedImage(this, x, y, texture).setDepth(12).setFlipX(flipX);
     const timeScale = texture === 'playerDebris' ? PLAYER_DEBRIS_MULTIPLIER : 1;
+    // The final player's debris is a permanent part of the frozen GAME OVER field.
+    if (texture === 'playerDebris' && this.playerLives === 0) return;
     this.tweens.add({
       targets: debris, alpha: 0,
       delay: DEBRIS_HOLD_MS * timeScale,
@@ -693,6 +703,7 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
         if (this.state !== 'exploding') return;
         this.state = 'gameOver';
+        this.tweens.pauseAll();
         this.gameOverHint.setVisible(true);
         this.drawHud();
       });
@@ -933,8 +944,15 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    for (const shot of [...this.shots]) {
+    // Resolve friendly kills first so a stage-completing kill wins a same-tick
+    // tie against an enemy projectile, independent of projectile insertion order.
+    const damageOrder = [
+      ...this.shots.filter((shot) => shot.kind === 'missile' || shot.kind === 'torpedo'),
+      ...this.shots.filter((shot) => shot.kind !== 'missile' && shot.kind !== 'torpedo'),
+    ];
+    for (const shot of damageOrder) {
       if (this.state !== 'playing' || this.pendingStageAdvance) break;
+      if (!this.shots.includes(shot)) continue;
       if (shot.kind === 'missile' || shot.kind === 'torpedo') {
         const targets: EnemyKind[] = shot.kind === 'missile' ? ['plane', 'sweeper'] : ['sub'];
         const target = this.enemies.find((enemy) => targets.includes(enemy.kind) && this.intersects(shot, enemy));
