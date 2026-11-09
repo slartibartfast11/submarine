@@ -638,13 +638,16 @@ export class BattleScene extends Phaser.Scene {
     if (enemy.kind === 'plane' && !destroyed) {
       this.lastPlaneExit = { edge: exitEdge(enemy.direction), at: this.elapsed * 1000 };
     }
+    const debrisFlipX = enemy.image.flipX;
     enemy.image.destroy();
     if (enemy.kind === 'sub') {
       this.nextEnemySub = this.elapsed * 1000 + 1400 + Math.random() * 1800;
     }
     if (destroyed) {
       this.awardPoints(enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200);
-      this.explode(enemy.x, enemy.y);
+      const debrisTexture = enemy.kind === 'plane' ? 'planeDebris' :
+        enemy.kind === 'sweeper' ? 'sweeperDebris' : 'enemySubDebris';
+      this.showDebris(enemy.x, enemy.y, debrisTexture, debrisFlipX);
       if (enemy.kind === stageTarget(this.stage)) {
         this.stageKills++;
         if (this.stageKills >= stageGoal(this.cycle, this.stage)) this.pendingStageAdvance = true;
@@ -654,9 +657,19 @@ export class BattleScene extends Phaser.Scene {
     // Shots already fired by destroyed enemies continue their journeys.
   }
 
+  /** The original starburst is reserved for projectile interceptions. */
   private explode(x: number, y: number): void {
     const star = this.add.image(x, y, 'star').setDepth(12).setScale(1.4);
     this.tweens.add({ targets: star, scale: 0.7, duration: 200, onComplete: () => star.destroy() });
+  }
+
+  /** Fixed shattered-vessel LCD glyph: hold, then let the etch fade away. */
+  private showDebris(x: number, y: number, texture: string, flipX = false): void {
+    const debris = createEtchedImage(this, x, y, texture).setDepth(12).setFlipX(flipX);
+    this.tweens.add({
+      targets: debris, alpha: 0, delay: 230, duration: 140,
+      onComplete: () => debris.destroy(),
+    });
   }
 
   private hitPlayer(): void {
@@ -665,7 +678,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.banner);
     this.banner.setVisible(false);
     this.playerLives--;
-    this.explode(this.player.x, this.player.y);
+    this.showDebris(this.player.x, this.player.y, 'playerDebris', this.player.flipX);
     this.player.setVisible(false);
     this.drawHud();
 
