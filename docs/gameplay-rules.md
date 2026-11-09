@@ -9,9 +9,9 @@
 | Arrow keys or `W A S D` | Move left, right, up or down |
 | `Space` | Fire a missile |
 | `X` | Fire a torpedo, once unlocked |
-| `Esc` | Return to the main menu |
+| `Esc` | Pause / menu |
 
-On touchscreens, use the on-screen direction pad, **MISSILE**, **TORPEDO** and **MENU** buttons. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
+On touchscreens, use the on-screen direction pad, **MISSILE** and **TORPEDO** buttons. The separate **PAUSE / MENU** button freezes the game and offers **Continue** or **Main Menu**. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
 
 Your submarine moves between **six positions** across the screen and **two depths** underwater.
 
@@ -47,4 +47,4 @@ After stage 1-3, the stages repeat at a faster pace with higher targets.
 
 You start with **three submarines**. Each loss lights an X on the display. A replacement submarine enters and you retry the same stage while keeping your score.
 
-After the third loss, the game ends. Press **Esc** to return to the menu. The high score is remembered while the page remains open.
+After the third loss, the game ends. Press **Esc** to open the pause/menu panel, then choose **Main Menu**. The high score is remembered while the page remains open.

@@ -25,7 +25,49 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
 .menu-credit a:focus-visible { outline: 2px solid #26372d; outline-offset: 3px; }
 .game-row[data-screen="menu"] ~ .footnote,
 .game-row[data-screen="battle"] ~ .menu-credit { display: none; }
-.touch-dpad, .touch-side, .rotate-hint { display: none; }
+.touch-dpad, .touch-side, .touch-toolbar, .rotate-hint { display: none; }
+
+.pause-overlay[hidden] { display: none; }
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(26 38 30 / 72%);
+}
+.pause-panel {
+  width: min(90vw, 350px);
+  padding: 28px 24px;
+  border: 4px solid #4c594c;
+  border-radius: 14px;
+  background: #d5dac8;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 30%);
+  text-align: center;
+}
+.pause-panel h2 { margin: 0 0 12px; font-size: 25px; letter-spacing: .07em; }
+.pause-panel p { margin: 0 0 20px; line-height: 1.4; font-size: 14px; }
+.pause-panel .touch-key {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  margin: 10px 0 0;
+  border: 2px solid #52634e;
+  border-radius: 10px;
+  background: #dee4d6;
+  color: #26372d;
+  font: 700 15px Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pause-panel .pause-continue { background: #b4c4a9; }
+.pause-panel .touch-key:focus-visible { outline: 3px solid #26372d; outline-offset: 2px; }
+.pause-panel .touch-key:active, .pause-panel .touch-key.is-held {
+  background: #52634e;
+  color: #fff;
+}
+
 
 @media (any-pointer: coarse) {
   :root { --pad-button: clamp(44px, 8.5dvh, 60px); }
@@ -41,7 +83,7 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   .game-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas: "screen screen" "movement actions";
+    grid-template-areas: "toolbar toolbar" "screen screen" "movement actions";
     align-items: center;
     justify-items: center;
     gap: 10px 8px;
@@ -56,6 +98,19 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
     border-width: 5px;
     border-radius: 8px;
   }
+  .touch-toolbar {
+    grid-area: toolbar;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+  .touch-toolbar .pause-key {
+    padding: 7px 14px;
+    min-height: 44px;
+    background: #e8e8d8;
+    border-color: #52634e;
+  }
+  .game-row[data-screen="menu"] .touch-toolbar { display: none; }
   .touch-dpad {
     grid-area: movement;
     display: grid;
@@ -103,8 +158,9 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   .touch-dpad .down { grid-column: 2; grid-row: 3; }
   .touch-side .touch-key { min-width: 100px; padding: 10px 14px; }
   .touch-actions .weapon-key { background: #b4c4a9; min-height: 52px; }
-  .touch-actions .menu-key { font-size: 11px; min-height: 44px; }
-  .touch-start .start-key { min-height: 56px; min-width: 122px; }
+  .game-row[data-paused="true"] .touch-dpad,
+  .game-row[data-paused="true"] .touch-side { pointer-events: none; }
+   .touch-start .start-key { min-height: 56px; min-width: 122px; }
   .rotate-hint { display: block; margin: 12px 0 0; text-align: center; font-size: 12px; }
   .footnote, .menu-credit { margin-top: 8px; font-size: 10px; }
 }
@@ -112,7 +168,7 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
 @media (any-pointer: coarse) and (orientation: landscape) {
   .game-row, .game-row[data-screen="menu"] {
     grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "movement screen actions";
+    grid-template-areas: "toolbar toolbar toolbar" "movement screen actions";
     gap: 6px;
   }
   .game-row[data-screen="menu"] {
@@ -122,6 +178,8 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
     width: 100%;
     max-width: calc((100dvh - 20px) * 16 / 9);
   }
+  .touch-toolbar { justify-content: flex-end; }
+  .touch-toolbar .pause-key { min-height: 36px; padding: 4px 12px; font-size: 11px; }
   .touch-side { width: clamp(94px, 15vw, 135px); }
   .touch-side .touch-key { min-width: 0; width: 100%; padding: 8px 4px; }
   .touch-start, .touch-actions { width: 100%; flex-direction: column; }

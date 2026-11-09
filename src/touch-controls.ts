@@ -1,4 +1,4 @@
-import { dispatchControl, subscribeControlScreen, type GameControl } from './controls';
+import { dispatchControl, subscribeControlScreen, subscribePauseOpen, type GameControl } from './controls';
 
 const REPEAT_DELAY_MS = 300;
 const REPEAT_INTERVAL_MS = 140;
@@ -26,6 +26,15 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
     for (const pointerId of held.keys()) release(pointerId);
   }
 
+  const overlay = root.querySelector<HTMLElement>('.pause-overlay');
+  const resumeButton = root.querySelector<HTMLButtonElement>('.pause-continue');
+  const stopPauseSubscription = subscribePauseOpen(open => {
+    releaseAll();
+    root.dataset.paused = String(open);
+    if (overlay) overlay.hidden = !open;
+    if (open) resumeButton?.focus();
+  });
+
   const stopScreenSubscription = subscribeControlScreen(screen => {
     releaseAll();
     root.dataset.screen = screen;
@@ -39,6 +48,7 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
     if (!button || !root.contains(button)) return;
     const control = button.dataset.control as GameControl | undefined;
     if (!control) return;
+    if (root.dataset.paused === 'true' && control !== 'resume' && control !== 'quit') return;
 
     event.preventDefault();
     button.setPointerCapture(event.pointerId);
@@ -74,6 +84,7 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
   return () => {
     releaseAll();
     stopScreenSubscription();
+    stopPauseSubscription();
     root.removeEventListener('pointerdown', onPointerDown);
     root.removeEventListener('pointerup', onPointerEnd);
     root.removeEventListener('pointercancel', onPointerEnd);

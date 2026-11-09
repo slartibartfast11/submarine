@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   dispatchControl, keyToControl, setControlScreen,
-  subscribeControls, subscribeControlScreen,
+  subscribeControls, subscribeControlScreen, setPauseOpen, subscribePauseOpen,
 } from '../src/controls.ts';
 
 test('keyboard codes map to the same actions used by touchscreen buttons', () => {
@@ -42,4 +42,16 @@ test('screen visibility subscribers receive current scene and cleanup', () => {
   setControlScreen('battle');
   assert.deepEqual(views, ['menu', 'battle', 'menu']);
   setControlScreen('menu');
+});
+
+test('pause visibility updates subscribers and supports cleanup', () => {
+  const shown = [];
+  const stop = subscribePauseOpen(open => shown.push(open));
+  setPauseOpen(true);
+  setPauseOpen(true);
+  setPauseOpen(false);
+  stop();
+  setPauseOpen(true);
+  setPauseOpen(false);
+  assert.deepEqual(shown, [false, true, false]);
 });

@@ -16,9 +16,9 @@ The title screen uses the project's original *Submarine Battle Beneath the Waves
 | Arrow keys / `W A S D` | Move between six positions and two depths |
 | `Space` | Fire a missile |
 | `X` | Fire a torpedo (stage 3 of each cycle) |
-| `Esc` | Main menu |
+| `Esc` | Pause / menu |
 
-On phones and tablets, use the on-screen direction pad and weapon buttons; tap **Classic** or **Modern** to start. Hold left or right to move through multiple columns. Landscape orientation gives the largest playfield. Keyboard controls remain available on devices with a keyboard.
+On phones and tablets, use the on-screen direction pad and weapon buttons; tap **Classic** or **Modern** to start. Hold left or right to move through multiple columns. Landscape orientation gives the largest playfield. **PAUSE / MENU** is separate from the weapon buttons and opens a confirmation panel offering **Continue** or **Main Menu**. Keyboard **Esc** opens the same panel. Keyboard controls remain available on devices with a keyboard.
 
 One missile and one torpedo can be in flight simultaneously. Each weapon has a separate lockout until its previous shot resolves.
 

@@ -9,7 +9,10 @@
   </head>
   <body>
     <main>
-      <div class="game-row" id="touch-controls" data-screen="menu">
+      <div class="game-row" id="touch-controls" data-screen="menu" data-paused="false">
+        <div class="touch-toolbar">
+          <button class="touch-key pause-key" data-control="menu" type="button">PAUSE / MENU</button>
+        </div>
         <nav class="touch-dpad" aria-label="Submarine movement">
           <button class="touch-key up" data-control="up" type="button" aria-label="Move up">▲</button>
           <button class="touch-key left" data-control="left" type="button" aria-label="Move left">◀</button>
@@ -25,13 +28,20 @@
           <div class="touch-actions">
             <button class="touch-key weapon-key" data-control="missile" type="button">MISSILE</button>
             <button class="touch-key weapon-key" data-control="torpedo" type="button">TORPEDO</button>
-            <button class="touch-key menu-key" data-control="menu" type="button">MENU</button>
-          </div>
+           </div>
         </nav>
+        <div class="pause-overlay" role="dialog" aria-modal="true" aria-labelledby="pause-heading" hidden>
+          <div class="pause-panel">
+            <h2 id="pause-heading">GAME PAUSED</h2>
+            <p>Your game is saved in place until you continue.</p>
+            <button class="touch-key pause-continue" data-control="resume" type="button">CONTINUE</button>
+            <button class="touch-key pause-quit" data-control="quit" type="button">MAIN MENU</button>
+          </div>
+        </div>
       </div>
       <p class="rotate-hint">Rotate your phone for a larger playfield.</p>
       <p class="menu-credit">Inspired by Casio's <em>Submarine Battle</em> <span aria-hidden="true">·</span> <a href="https://github.com/slartibartfast11/submarine" target="_blank" rel="noopener noreferrer">Source code on GitHub</a></p>
-      <p class="footnote" id="control-hint">ARROWS / WASD — MOVE &nbsp;·&nbsp; SPACE — MISSILE &nbsp;·&nbsp; X — TORPEDO (STAGE 3) &nbsp;·&nbsp; ESC — MENU</p>
+      <p class="footnote" id="control-hint">ARROWS / WASD — MOVE &nbsp;·&nbsp; SPACE — MISSILE &nbsp;·&nbsp; X — TORPEDO (STAGE 3) &nbsp;·&nbsp; ESC — PAUSE / MENU</p>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

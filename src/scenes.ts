@@ -18,7 +18,7 @@ import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
 import {
-  keyToControl, setControlScreen, subscribeControls, type GameControl,
+  keyToControl, setControlScreen, setPauseOpen, subscribeControls, type GameControl,
 } from './controls';
 import {
   CLASSIC_COLUMNS, CLASSIC_HALF_COLUMNS, CLASSIC_HALF_ROWS,
@@ -94,6 +94,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    setPauseOpen(false);
     setControlScreen('menu');
     this.cameras.main.setBackgroundColor(COLOURS.background);
     // The original cover is a static title illustration, not a game sprite.
@@ -173,6 +174,7 @@ export class BattleScene extends Phaser.Scene {
   private warpSequence = '';
   private startWarp: StagePosition | null = null;
   private entryTone: OscillatorNode | null = null;
+  private paused = false;
 
   constructor() { super('battle'); }
 
@@ -181,6 +183,7 @@ export class BattleScene extends Phaser.Scene {
     this.startWarp = data.warp ?? null;
     this.warpSequence = '';
     this.entryTone = null;
+    this.paused = false;
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -200,13 +203,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
+    setPauseOpen(false);
     setControlScreen('battle');
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
     this.hud = new LcdHud(this, this.mode);
     this.player = createEtchedImage(this, PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
-    this.gameOverHint = addLabel(this, 370, 509, 'ESC  MAIN MENU', 16).setDepth(30).setVisible(false);
+    this.gameOverHint = addLabel(this, 370, 509, 'ESC  PAUSE / MENU', 16).setDepth(30).setVisible(false);
     this.drawHud();
     if (this.startWarp) {
       this.warpTo(this.startWarp);
@@ -221,6 +225,7 @@ export class BattleScene extends Phaser.Scene {
         event.preventDefault();
       }
       if (control === 'menu') { this.handleControl('menu', event.repeat); return; }
+      if (this.paused) return;
 
       // Stage warps are keyboard-only and may be entered during submarine entry.
       if (!event.repeat && (this.state === 'entering' || this.state === 'playing')) {
@@ -234,14 +239,23 @@ export class BattleScene extends Phaser.Scene {
     const stopTouch = subscribeControls((control, repeated) => this.handleControl(control, repeated));
     this.input.keyboard?.on('keydown', onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.paused = false;
+      setPauseOpen(false);
       this.input.keyboard?.off('keydown', onKey);
       stopTouch();
     });
   }
 
   private handleControl(control: GameControl, repeated = false): void {
-    if (control === 'menu') { this.scene.start('menu'); return; }
-    if (this.state !== 'playing') return;
+    if (control === 'menu') {
+      if (repeated) return;
+      if (this.paused) this.resumeGame();
+      else this.pauseGame();
+      return;
+    }
+    if (control === 'resume') { if (this.paused) this.resumeGame(); return; }
+    if (control === 'quit') { if (this.paused) this.returnToMenu(); return; }
+    if (this.paused || this.state !== 'playing') return;
     if (control === 'left') {
       this.columns = Math.max(0, this.columns - 1);
       this.facing = -1;
@@ -261,6 +275,29 @@ export class BattleScene extends Phaser.Scene {
     }
     this.player.setPosition(PLAYER_COLUMNS[this.columns], PLAYER_DEPTHS[this.depth]);
     this.player.setFlipX(this.facing === -1);
+  }
+
+  private pauseGame(): void {
+    if (this.paused) return;
+    this.paused = true;
+    // Pause the scene clock and tweens, including delayed entry and death callbacks.
+    this.scene.pause();
+    setPauseOpen(true);
+  }
+
+  private resumeGame(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    setPauseOpen(false);
+    this.scene.resume();
+  }
+
+  private returnToMenu(): void {
+    // Resume before transitioning so the old scene can shut down normally.
+    this.paused = false;
+    setPauseOpen(false);
+    this.scene.resume();
+    this.scene.start('menu');
   }
 
   private drawHud(): void {

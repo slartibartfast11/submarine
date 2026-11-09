@@ -7,7 +7,7 @@ For the player-facing rules, see [How to play](gameplay-rules.md). For rendering
 ## Core game contract
 
 - **Two modes, one ruleset:** UI **Classic** corresponds to internal mode `classic`; UI **Modern** corresponds to internal mode `dynamic`. Both use the same player controls, six horizontal positions, two underwater depths, stage objectives, scoring and lives. Modern does **not** grant free two-dimensional player movement.
-- **Input:** keyboard and touchscreen buttons use the same scene action handler. On touch devices, direction, fire, menu and mode-selection commands are exposed as DOM buttons outside the game canvas. Touch left/right repeats after a short hold; weapon actions fire once per press. Keyboard input, including the debug warp sequence, remains supported. Menu choices are also tappable in the canvas. Game actions are ignored during entry and after game over, except for returning to the menu.
+- **Input:** keyboard and touchscreen buttons use the same scene action handler. On touch devices, direction, fire, menu and mode-selection commands are exposed as DOM buttons outside the game canvas. Touch left/right repeats after a short hold; weapon actions fire once per press. Keyboard input, including the debug warp sequence, remains supported. Menu choices are also tappable in the canvas. Gameplay actions are ignored during entry and after game over. The pause/menu control remains available.
 - **Player movement:** left/right selects one of six columns and updates the last horizontal facing direction; up/down selects one of two depths. The submarine cannot move beyond these positions.
 - **Weapons:** `Space` launches a strictly vertical missile; `X` launches a horizontal torpedo. One of each may exist simultaneously, but a second of the same kind cannot launch until its previous shot is destroyed or leaves play. Torpedoes are available only in stage **3** of each cycle. Stage 2-1 and 2-2 lock them again.
 - **Targets:** player missiles can destroy aircraft and surface escorts, not enemy submarines. Player torpedoes can destroy enemy submarines, not aircraft or surface escorts.
@@ -77,6 +77,14 @@ Implementation: `beginEntry`, `warpTo`, `hitPlayer` in [`src/scenes.ts`](../src/
 **Gameplay invariants** include the stage target kinds, weapon compatibility and independent lockouts, submarine position grid, projectile direction constraints, collision exceptions, stage completion by kills, and the rule that a ship's fired shots remain active after its destruction.
 
 **Tunable values** include spawn timing, enemy speeds and maximum simultaneous enemy counts, reconnaissance and attack-pattern probabilities, base clock interval, score awards, goals per cycle, missile/torpedo speeds, collision dimensions, and individual attack delays. Their **current values** live in source code, not in this manifest as an alternate configuration file. When changing a tunable, check whether tests or user-facing rules need updating.
+
+## Pause and menu
+
+- On touchscreen devices, **PAUSE / MENU** occupies its own toolbar above the playfield, separate from the directional and weapon controls. It is not beside TORPEDO.
+- The button (or the **Escape** key) opens the pause overlay. The user must choose **CONTINUE** to resume or **MAIN MENU** to abandon the run; no single tap leaves gameplay.
+- Pausing suspends the Phaser battle scene, so simulation updates, delayed entry/life callbacks and scene tweens do not advance. The DOM overlay remains interactive while the scene is paused.
+- While paused, ordinary movement and weapon input is ignored. Escape again resumes. Explicit MAIN MENU first resumes the suspended scene, then switches to the title scene. Shutdown resets the overlay state.
+- The overlay is visible for keyboard as well as touch users. Its buttons are managed independently of the scene input clock.
 
 ## Touch layout and lifecycle
 
