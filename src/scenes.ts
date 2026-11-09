@@ -10,6 +10,9 @@ import {
   type BestRun, type GameMode, type StageNumber, type StagePosition,
 } from './config';
 import { installSprites, createEtchedImage } from './sprites';
+import {
+  DEBRIS_HOLD_MS, DEBRIS_FADE_MS, PLAYER_DEBRIS_MULTIPLIER, PLAYER_DEATH_PAUSE_MS,
+} from './debris-timing';
 import { sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
@@ -663,11 +666,14 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: star, scale: 0.7, duration: 200, onComplete: () => star.destroy() });
   }
 
-  /** Fixed shattered-vessel LCD glyph: hold, then let the etch fade away. */
+  /** Fixed shattered-vessel LCD glyph; player loss lingers three times as long. */
   private showDebris(x: number, y: number, texture: string, flipX = false): void {
     const debris = createEtchedImage(this, x, y, texture).setDepth(12).setFlipX(flipX);
+    const timeScale = texture === 'playerDebris' ? PLAYER_DEBRIS_MULTIPLIER : 1;
     this.tweens.add({
-      targets: debris, alpha: 0, delay: 230, duration: 140,
+      targets: debris, alpha: 0,
+      delay: DEBRIS_HOLD_MS * timeScale,
+      duration: DEBRIS_FADE_MS * timeScale,
       onComplete: () => debris.destroy(),
     });
   }
@@ -684,14 +690,14 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.playerLives === 0) {
       // Freeze all enemies/projectiles at their final displayed positions.
-      this.time.delayedCall(430, () => {
+      this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
         if (this.state !== 'exploding') return;
         this.state = 'gameOver';
         this.gameOverHint.setVisible(true);
         this.drawHud();
       });
     } else {
-      this.time.delayedCall(650, () => {
+      this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
         if (this.state !== 'exploding') return;
         this.clearBattlefield();
         this.showStageBanner();
