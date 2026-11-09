@@ -90,7 +90,7 @@ export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
 
   preload(): void {
-    this.load.image('coverArt', './cover.avif');
+    this.load.image('coverArt', './cover.webp');
   }
 
   create(): void {
