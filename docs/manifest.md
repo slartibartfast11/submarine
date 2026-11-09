@@ -1,6 +1,6 @@
 # Submarine — gameplay and implementation manifest
 
-**Audience:** maintainers and AI coding agents. This file records the current implemented game contract, not a development diary or player instructions.
+This document records the implemented gameplay rules and technical constraints for contributors.
 
 For the player-facing rules, see [How to play](gameplay-rules.md). For rendering and sprite specifications, see [Visual design](visual-design.md). Where this document and the executable code disagree, inspect the code and tests before changing either; do not assume an undocumented difference is a defect.
 
