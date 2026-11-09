@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { SPRITE_MASKS } from '../src/sprite-masks.ts';
 import { LCD_SEGMENTS } from '../src/lcd-segments.ts';
 import { CURVED_ETCHES } from '../src/curved-art.ts';
+import { DEBRIS_ETCHES } from '../src/debris-art.ts';
 
 test('only the impact starburst retains a 1-bit mask', () => {
   assert.deepEqual(Object.keys(SPRITE_MASKS).sort(), ['star']);
@@ -76,4 +77,26 @@ test('vessel path sets retain expected bounds and shape counts', () => {
   assert.ok(player.clear.length >= 4);
   assert.ok(escort.ink.length >= 6);
   assert.ok(escort.clear.length >= 3);
+});
+
+test('approved Debris B destroyed-vessel textures are distinct LCD etches', () => {
+  assert.deepEqual(Object.keys(DEBRIS_ETCHES).sort(), [
+    'enemySubDebris', 'planeDebris', 'playerDebris', 'sweeperDebris',
+  ]);
+  for (const [name, etch] of Object.entries(DEBRIS_ETCHES)) {
+    assert.ok(etch.width >= 76 && etch.width <= 100, name);
+    assert.ok(etch.height >= 38 && etch.height <= 50, name);
+    assert.ok(etch.ink.length >= 9, name);
+    for (const path of [...etch.ink, ...etch.clear]) {
+      assert.match(path, /^M/, name);
+      assert.match(path, /Z$/, name);
+    }
+  }
+  // The airframe is largely fragments, not two intact halves.
+  assert.ok(DEBRIS_ETCHES.planeDebris.ink.length >= 28);
+  // The ship retains its bridge-window and hull-aperture details.
+  assert.ok(DEBRIS_ETCHES.sweeperDebris.clear.length >= 3);
+  // The player's shattered hull retains recognizable portholes.
+  assert.ok(DEBRIS_ETCHES.playerDebris.clear.length >= 3);
+  assert.notDeepEqual(DEBRIS_ETCHES.enemySubDebris.ink, DEBRIS_ETCHES.playerDebris.ink);
 });
