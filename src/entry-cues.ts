@@ -1,4 +1,4 @@
-import { ENTRY_STEP_MS } from './config';
+import { ENTRY_STEP_MS } from './config.ts';
 
 // Movement falls on the BOO beats of the approved Take 6 preview.
 // Notes are triggered by the scene clock so pausing also pauses the sequence.
