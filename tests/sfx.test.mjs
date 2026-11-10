@@ -28,6 +28,20 @@ test('synthesized durations follow attack, sustain and decay', () => {
   assert.equal(pcm.length, Math.ceil((p.attack + p.sustain + p.decay) * 10000));
 });
 
+test('the alternate torpedo sounds different from the original', () => {
+  const first = renderSfx(SFX_PRESETS.torpedoLaunch, 12000);
+  const second = renderSfx(SFX_PRESETS.torpedoLaunchAlternate, 12000);
+  assert.notDeepEqual(first, second);
+});
+
+test('new presets have the expected durations', () => {
+  for (const name of ['extraLife', 'gameOver', 'boatAppear']) {
+    const preset = SFX_PRESETS[name];
+    const output = renderSfx(preset, 10000);
+    assert.equal(output.length, Math.ceil((preset.attack + preset.sustain + preset.decay) * 10000), name);
+  }
+});
+
 test('the second missile candidate remains distinct from the selected effect', () => {
   const primary = renderSfx(SFX_PRESETS.missileLaunch, 16000);
   const alternate = renderSfx(SFX_PRESETS.missileLaunchAlternate, 16000);
