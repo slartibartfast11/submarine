@@ -7,7 +7,6 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - Display `public/cover.webp` uncropped at its original aspect ratio.
 - Centre **Classic** and **Modern** mode buttons beneath it; both are tappable.
 - Keep the title art separate from the monochrome gameplay canvas.
-- Use the original, two-instrument FM `public/audio/menu-fanfare.mp3` on the title screen, independently of procedural battle sounds. Respect the locally saved mute setting; offer a small replay control because browsers may block initial autoplay.
 
 ## Display
 
@@ -40,6 +39,6 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - **Classic:** six horizontal columns shared by three sky rows, one surface row and two underwater rows. Aircraft advance once every four shared clock ticks and surface escorts once every eight ticks. Aircraft altitude changes select a fixed silhouette; a blocked altitude change uses the actual resulting row.
 - **Modern:** sprites retain the same artwork while enemies move continuously. Aircraft use fixed level, climb and bank textures during smooth vertical movement.
 - Missiles travel vertically and torpedoes horizontally. Projectile collisions use logical hitboxes rather than opaque-pixel sampling; see `src/collision.ts` and `src/classic-grid.ts`.
-- Entry sound: three short WebAudio oscillator chirps, one per submarine entry position.
+- Entry sound: a muted, low, five-note retro cue composed as **BAAAAA–BOO / BAAAAA–BOO / BAAAA**. Sound and movement share scene-clock events: the two BOO beats move the submarine at 1.17 and 3.27 seconds; the long final note begins at 4.2 seconds. Control unlocks at 6.3 seconds. Preset parameters reproduce the approved Take 6 preview.
 - Procedural effects for launch, interception, enemy destruction, incoming weapons and player loss come from editable sound presets. A surface escort sounds once when it appears; a restored life triggers a reward after the kill; GAME OVER sounds after the final player explosion. Alternate missile/torpedo launches and aircraft approach/dive effects remain inactive drafts.
 

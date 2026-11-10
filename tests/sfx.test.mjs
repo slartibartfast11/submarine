@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderSfx } from '../src/sfx-renderer.ts';
 import { SFX_PRESETS } from '../src/sfx-presets.ts';
+import { ENTRY_SEQUENCE, ENTRY_COMPLETE_MS } from '../src/entry-cues.ts';
 
 test('every supplied preset renders a finite, non-empty audible waveform', () => {
   for (const [name, preset] of Object.entries(SFX_PRESETS)) {
@@ -26,6 +27,31 @@ test('synthesized durations follow attack, sustain and decay', () => {
   const p = SFX_PRESETS.playerDestroyed;
   const pcm = renderSfx(p, 10000);
   assert.equal(pcm.length, Math.ceil((p.attack + p.sustain + p.decay) * 10000));
+});
+
+test('approved entry phrase matches the animation on the BOO beats', () => {
+  assert.deepEqual(
+    ENTRY_SEQUENCE.map(cue => [cue.atMs, cue.sound, cue.column]),
+    [
+      [0, 'entryBaaaa', 4],
+      [1170, 'entryBoo', 3],
+      [2100, 'entryBaaaa', 3],
+      [3270, 'entryBooSecond', 2],
+      [4200, 'entryFinal', 2],
+    ],
+  );
+  assert.equal(ENTRY_COMPLETE_MS, 6300);
+  for (const cue of ENTRY_SEQUENCE) {
+    const tone = SFX_PRESETS[cue.sound];
+    const durationMs = (tone.attack + tone.sustain + tone.decay) * 1000;
+    assert.ok(cue.atMs + durationMs < ENTRY_COMPLETE_MS);
+  }
+  const steadyNote = SFX_PRESETS.entryBaaaa;
+  assert.equal(steadyNote.freq, 159);
+  assert.equal(steadyNote.slide, 0);
+  assert.equal(steadyNote.wave, 1);
+  assert.equal(steadyNote.decay, 0.035);
+  assert.equal(SFX_PRESETS.entryFinal.freq, 147);
 });
 
 test('the alternate torpedo sounds different from the original', () => {
