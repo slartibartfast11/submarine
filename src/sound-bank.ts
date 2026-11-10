@@ -5,9 +5,14 @@ import { SFX_PRESETS, type SoundId } from './sfx-presets';
 class SoundBank {
   muted = false;
   private caches = new WeakMap<AudioContext, Map<SoundId, AudioBuffer>>();
+  private outputNodes = new WeakMap<AudioContext, GainNode>();
+  private allOutputs = new Set<GainNode>();
 
   toggleMute(): boolean {
     this.muted = !this.muted;
+    for (const output of this.allOutputs) {
+      output.gain.setTargetAtTime(this.muted ? 0 : 1, output.context.currentTime, 0.01);
+    }
     return this.muted;
   }
 
@@ -25,6 +30,14 @@ class SoundBank {
       buffer.getChannelData(0).set(pcm);
       cache.set(name, buffer);
     }
+    let output = this.outputNodes.get(context);
+    if (!output) {
+      output = context.createGain();
+      output.gain.value = this.muted ? 0 : 1;
+      output.connect(context.destination);
+      this.outputNodes.set(context, output);
+      this.allOutputs.add(output);
+    }
     const source = context.createBufferSource();
     const volume = context.createGain();
     const gains: Partial<Record<SoundId, number>> = {
@@ -34,7 +47,7 @@ class SoundBank {
     };
     volume.gain.value = gains[name] ?? 0.1;
     source.buffer = buffer;
-    source.connect(volume).connect(context.destination);
+    source.connect(volume).connect(output);
     source.onended = () => { source.disconnect(); volume.disconnect(); };
     source.start();
   }
