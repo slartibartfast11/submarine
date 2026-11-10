@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderSfx } from '../src/sfx-renderer.ts';
 import { SFX_PRESETS } from '../src/sfx-presets.ts';
+import { ENTRY_CUES } from '../src/entry-cues.ts';
 
 test('every supplied preset renders a finite, non-empty audible waveform', () => {
   for (const [name, preset] of Object.entries(SFX_PRESETS)) {
@@ -40,6 +41,25 @@ test('new presets have the expected durations', () => {
     const output = renderSfx(preset, 10000);
     assert.equal(output.length, Math.ceil((preset.attack + preset.sustain + preset.decay) * 10000), name);
   }
+});
+
+test('entry has two paired motifs followed by a longer last note', () => {
+  assert.deepEqual(ENTRY_CUES.map(step => step.length), [2, 2, 1]);
+  assert.deepEqual(ENTRY_CUES[0].map(note => note.sound), ['entryDah', 'entryDunn']);
+  assert.deepEqual(ENTRY_CUES[1].map(note => note.sound), ['entryDah', 'entryDunn']);
+  assert.equal(ENTRY_CUES[2][0].sound, 'entryFinal');
+
+  for (const notes of ENTRY_CUES) {
+    for (const note of notes) {
+      const preset = SFX_PRESETS[note.sound];
+      const end = note.offset + preset.attack + preset.sustain + preset.decay;
+      assert.ok(end < 2.1, 'no phrase should spill into the next entry step');
+    }
+  }
+  const short = SFX_PRESETS.entryDah;
+  const long = SFX_PRESETS.entryFinal;
+  assert.ok(long.attack + long.sustain + long.decay >
+    short.attack + short.sustain + short.decay);
 });
 
 test('the second missile candidate remains distinct from the selected effect', () => {
