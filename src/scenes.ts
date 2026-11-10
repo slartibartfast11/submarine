@@ -504,6 +504,7 @@ export class BattleScene extends Phaser.Scene {
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
     if (kind === 'sub') this.playSfx('enemySubAppear');
+    else if (kind === 'sweeper') this.playSfx('boatAppear');
   }
 
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
@@ -671,8 +672,15 @@ export class BattleScene extends Phaser.Scene {
 
   private awardPoints(points: number): void {
     const result = applyScore(this.score, this.playerLives, points, LIVES);
+    const lifeAwarded = result.lives > this.playerLives;
     this.score = result.score;
     this.playerLives = result.lives;
+    // Let the kill sound begin before celebrating a restored life.
+    if (lifeAwarded) {
+      this.time.delayedCall(220, () => {
+        if (this.state === 'playing') this.playSfx('extraLife');
+      });
+    }
     sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
     this.drawHud();
   }
@@ -742,6 +750,7 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
         if (this.state !== 'exploding') return;
         this.state = 'gameOver';
+        this.playSfx('gameOver');
         this.tweens.pauseAll();
         this.gameOverHint.setVisible(true);
         this.drawHud();
