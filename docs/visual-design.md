@@ -7,6 +7,7 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - Display `public/cover.webp` uncropped at its original aspect ratio.
 - Centre **Classic** and **Modern** mode buttons beneath it; both are tappable.
 - Keep the title art separate from the monochrome gameplay canvas.
+- Use the original, two-instrument FM `public/audio/menu-fanfare.mp3` on the title screen, independently of procedural battle sounds. Respect the locally saved mute setting; offer a small replay control because browsers may block initial autoplay.
 
 ## Display
 

@@ -129,6 +129,36 @@ export class MenuScene extends Phaser.Scene {
     modeButton(321, 'classic', '1', 'CLASSIC', 'LCD HANDHELD STYLE');
     modeButton(639, 'modern', '2', 'MODERN', 'ARCADE STYLE');
     addLabel(this, 480, 518, 'TAP A MODE OR PRESS 1 / 2', 15).setOrigin(0.5);
+    // A real audio asset, independent of the gameplay sound-effects synthesizer.
+    // Browsers may block playback until a gesture; the replay control handles that.
+    const fanfare = new Audio();
+    fanfare.preload = 'none';
+    fanfare.volume = 0.42;
+    const stopFanfare = (): void => {
+      fanfare.pause();
+      try { fanfare.currentTime = 0; } catch { /* No decoded audio yet. */ }
+    };
+    const playFanfare = (): void => {
+      if (soundBank.muted || !this.scene.isActive()) return;
+      if (!fanfare.src) fanfare.src = new URL('./audio/menu-fanfare.mp3', document.baseURI).href;
+      stopFanfare();
+      void fanfare.play().catch(() => {
+        // Autoplay is often blocked on first visit. User can tap PLAY INTRO.
+      });
+    };
+    const replayText = addLabel(this, 91, 515, 'P  PLAY INTRO', 15)
+      .setOrigin(0.5).setInteractive({ useHandCursor: true });
+    replayText.setAlpha(soundBank.muted ? 0.45 : 1);
+    replayText.on('pointerdown', playFanfare);
+    const stopMuteSubscription = soundBank.subscribeMute(muted => {
+      replayText.setAlpha(muted ? 0.45 : 1);
+      if (muted) stopFanfare();
+      else playFanfare();
+    });
+    // SceneManager emits CREATE after marking this scene RUNNING.
+    // Calling playFanfare() directly in create() fails its isActive() guard.
+    this.events.once(Phaser.Scenes.Events.CREATE, playFanfare);
+
     const soundText = addLabel(this, 871, 515, soundBank.muted ? 'SOUND OFF' : 'SOUND ON', 15)
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
     const toggleSound = (): void => {
@@ -150,6 +180,7 @@ export class MenuScene extends Phaser.Scene {
       if (warpSequence) return;
       const control = keyToControl(event.code);
       if (control === 'sound') { toggleSound(); return; }
+      if (event.code === 'KeyP') { playFanfare(); return; }
       if (control === 'classic' || control === 'modern') this.startMode(control);
     };
     const stopTouch = subscribeControls(control => {
@@ -159,6 +190,9 @@ export class MenuScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown', onKey);
       stopTouch();
+      stopMuteSubscription();
+      stopFanfare();
+      fanfare.removeAttribute('src');
     });
   }
 
