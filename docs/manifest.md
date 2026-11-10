@@ -66,7 +66,7 @@ Implementation: `BattleScene.updateEnemies`, `BattleScene.updateShots` and `Batt
 
 ## Entry sequence, warps and terminal states
 
-- Entry is a non-interactive sequence at the lower depth: **zero-based columns 4 → 3 → 2**, with **2.1 seconds** between positions and a short oscillator chirp at each position. Simulation starts when entry ends.
+- Entry is a non-interactive sequence at the lower depth: **zero-based columns 4 → 3 → 2**, with **2.1 seconds** between positions. The sound engine plays two original low notes at each of the first two positions (dah-dunn), then one lower sustained note at the third (dunnnn). The cue does not change entry timing or simulation start. Scheduled notes are stopped if a warp or scene shutdown interrupts the entry. Simulation starts when entry ends.
 - Each player hit enters an explosion state. With remaining lives, the current stage restarts at the same cycle/stage with a fresh target count; with no lives, the scene becomes `gameOver` and stops updating.
 - Stage warp syntax: `G` + single-digit cycle + single-digit stage (1–3), e.g. `G13`, `G23`, `G31`. At the menu, warps start Classic directly; during a run, they preserve score and lives, clear projectiles and enemies, and reset stage progress. Warps are not available while exploding or after game over.
 - Escape returns to the menu from a run, including after game over.
