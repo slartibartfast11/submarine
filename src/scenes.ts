@@ -374,7 +374,17 @@ export class BattleScene extends Phaser.Scene {
   private playEntryCue(pose: 0 | 1 | 2): void {
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
-    if (!context || context.state !== 'running') return;
+    if (!context || context.state === 'closed') return;
+    // A mode selection can be the gesture that first unlocks WebAudio.
+    if (context.state === 'suspended') {
+      const generation = this.entryGeneration;
+      void context.resume().then(() => {
+        if (generation === this.entryGeneration &&
+            this.state === 'entering' && this.scene.isActive() &&
+            this.columns === [4, 3, 2][pose]) this.playEntryCue(pose);
+      }).catch(() => {});
+      return;
+    }
     const at = context.currentTime;
     for (const note of ENTRY_CUES[pose]) {
       const source = soundBank.play(context, note.sound, at + note.offset);
