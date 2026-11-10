@@ -554,7 +554,8 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private planeChangedMotion(enemy: Enemy, next: AircraftVerticalMotion): void {
+  private planeChangedMotion(enemy: Enemy, verticalChange: number): void {
+    const next: AircraftVerticalMotion = verticalChange > 0 ? 1 : verticalChange < 0 ? -1 : 0;
     const cue = aircraftMotionCue(enemy.lastVerticalMotion, next);
     enemy.lastVerticalMotion = next;
     if (!cue || this.aircraftEnteredThisStep) return;
