@@ -44,6 +44,7 @@ class SoundBank {
       enemyDestroyed: 0.18, playerDestroyed: 0.24, torpedoLaunch: 0.12,
       missileLaunch: 0.11, missileLaunchAlternate: 0.11,
       missileIntercept: 0.13, enemySubAppear: 0.12, enemyWeaponDrop: 0.075,
+      extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
     };
     volume.gain.value = gains[name] ?? 0.1;
     source.buffer = buffer;
