@@ -87,3 +87,12 @@ test('aircraft falling-bomb sound uses the selected longer whistle', () => {
   assert.equal(pcm.length, Math.ceil((preset.attack + preset.sustain + preset.decay) * 10000));
   assert.ok(pcm.some(value => Math.abs(value) > 0.005));
 });
+
+test('aircraft dive uses the approved siren preset, including the steep acceleration', () => {
+  const expected = {"wave":3,"freq":1500,"slide":-1.6,"dslide":-26.5,"minFreq":150,"vibDepth":0.9,"vibRate":12,"arpMult":1,"arpTime":0.1,"duty":0.5,"dutySweep":0,"attack":0.025,"sustain":0.46,"punch":0,"decay":0.19,"repeat":0,"lpf":6500,"lpfSweep":0,"lpfRes":0,"hpf":180,"hpfSweep":0,"phaserMs":1.2,"phaserSweep":-15.1,"crushBits":0,"crushHold":1,"gain":0.65,"seed":7095};
+  assert.deepEqual(SFX_PRESETS.planeDiveDraft, expected);
+  // The steep pitch drop reaches the minimum frequency before the full envelope ends.
+  const pcm = renderSfx(expected, 10000);
+  assert.ok(pcm.length > 4000 && pcm.length < 4800);
+  assert.ok(pcm.some(value => Math.abs(value) > 0.005));
+});

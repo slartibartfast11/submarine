@@ -41,22 +41,27 @@ test('muted playback interrupts the previous bomb and leaves the channel empty',
   assert.equal(stops, 1);
 });
 
-test('an older plane cannot steal or stop a newer plane sound when it dives', () => {
+test('any aircraft can start a dive or climb cue, but older aircraft cannot stop it', () => {
   const channel = new ExclusiveSoundChannel();
-  const first = {}, next = {};
+  const a = {}, b = {};
   const events = [];
-  channel.play(first, () => ({ stop: () => events.push('stop first') }));
-  channel.play(next, () => ({ stop: () => events.push('stop next') }));
-  channel.change(first, () => { events.push('wrong dive'); return null; });
-  channel.stop(first);
-  assert.deepEqual(events, ['stop first']);
-  channel.change(next, () => {
-    events.push('play dive');
-    return { stop: () => events.push('stop dive') };
+  const begin = (owner, cue) => channel.play(owner, () => {
+    events.push('start ' + cue);
+    return { stop: () => events.push('stop ' + cue) };
   });
-  assert.deepEqual(events, ['stop first', 'stop next', 'play dive']);
-  channel.stop(next);
-  assert.deepEqual(events, ['stop first', 'stop next', 'play dive', 'stop dive']);
+  begin(a, 'entry A');
+  begin(b, 'entry B');
+  begin(a, 'dive A');
+  channel.stop(b); // B's lifetime is independent of the sound currently playing.
+  assert.deepEqual(events, [
+    'start entry A', 'stop entry A', 'start entry B',
+    'stop entry B', 'start dive A',
+  ]);
+  begin(b, 'climb B');
+  channel.stop(a);
+  assert.deepEqual(events.slice(-2), ['stop dive A', 'start climb B']);
+  channel.stop(b);
+  assert.equal(events.at(-1), 'stop climb B');
 });
 
 test('the channel can be silenced on pause or scene shutdown', () => {
