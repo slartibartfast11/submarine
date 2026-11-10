@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { overlapsBox, sweptBoxesOverlap } from '../src/collision.ts';
+import { modernMissileInterceptsDrop, overlapsBox, sweptBoxesOverlap } from '../src/collision.ts';
 
 const box = (x, y, width, height) => ({x, y, width, height});
 
@@ -20,6 +20,28 @@ test('rising missile intercepts a falling bomb crossing between ticks', () => {
 test('parallel missiles and bombs in separate columns do not collide', () => {
   assert.equal(sweptBoxesOverlap(box(100, 180, 12, 16), box(100, 145, 12, 16),
     box(130, 140, 12, 12), box(130, 155, 12, 12)), false);
+});
+
+test('Modern missiles catch a drifting drop on either side of the firing line', () => {
+  const missileBefore = box(705, 320, 12, 18);
+  const missileAfter = box(705, 298, 12, 18);
+  for (const side of [-1, 1]) {
+    const dropBefore = box(705 + side * 15, 295, 12, 12);
+    const dropAfter = box(705 + side * 16, 303, 12, 12);
+    assert.equal(sweptBoxesOverlap(missileBefore, missileAfter, dropBefore, dropAfter), false);
+    assert.equal(modernMissileInterceptsDrop(missileBefore, missileAfter, dropBefore, dropAfter), true);
+  }
+});
+
+test('Modern interception still requires a close, simultaneous pass', () => {
+  const missileBefore = box(705, 320, 12, 18);
+  const missileAfter = box(705, 298, 12, 18);
+  // The drop crosses the missile vertically just outside its defensive reach.
+  assert.equal(modernMissileInterceptsDrop(missileBefore, missileAfter,
+    box(730, 295, 12, 12), box(731, 303, 12, 12)), false);
+  // Within horizontal reach, but the missile is already above the falling drop.
+  assert.equal(modernMissileInterceptsDrop(missileBefore, missileAfter,
+    box(720, 340, 12, 12), box(721, 348, 12, 12)), false);
 });
 
 test('fast-moving missile hits aircraft crossed between simulation frames', () => {
