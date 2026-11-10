@@ -20,6 +20,8 @@ import { droppedBombAppearance } from './drop-appearance';
 import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
+import { soundBank } from './sound-bank';
+import type { SoundId } from './sfx-presets';
 import {
   keyToControl, setControlScreen, setPauseOpen, subscribeControls, type GameControl,
 } from './controls';
@@ -33,6 +35,13 @@ import {
   classicBombFlight, classicBombQuarterStep, classicPlaneCanRelease,
   classicAdjacentBombThreat, type ClassicBombFlight, type SubPattern,
 } from './classic-grid';
+
+function updateSoundControls(): void {
+  document.querySelectorAll<HTMLButtonElement>('[data-control="sound"]').forEach(button => {
+    button.textContent = soundBank.muted ? 'SOUND OFF' : 'SOUND ON';
+    button.setAttribute('aria-pressed', String(!soundBank.muted));
+  });
+}
 
 // Shared across runs within this browser page, but never persisted to storage.
 let sessionBest: BestRun = { score: 0, cycle: 1, stage: 1 };
@@ -120,6 +129,14 @@ export class MenuScene extends Phaser.Scene {
     modeButton(321, 'classic', '1', 'CLASSIC', 'LCD HANDHELD STYLE');
     modeButton(639, 'modern', '2', 'MODERN', 'ARCADE STYLE');
     addLabel(this, 480, 518, 'TAP A MODE OR PRESS 1 / 2', 15).setOrigin(0.5);
+    const soundText = addLabel(this, 871, 515, soundBank.muted ? 'SOUND OFF' : 'SOUND ON', 15)
+      .setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const toggleSound = (): void => {
+      soundBank.toggleMute();
+      soundText.setText(soundBank.muted ? 'SOUND OFF' : 'SOUND ON');
+      updateSoundControls();
+    };
+    soundText.on('pointerdown', toggleSound);
     let warpSequence = '';
     const onKey = (event: KeyboardEvent): void => {
       if (event.repeat) return;
@@ -132,6 +149,7 @@ export class MenuScene extends Phaser.Scene {
       }
       if (warpSequence) return;
       const control = keyToControl(event.code);
+      if (control === 'sound') { toggleSound(); return; }
       if (control === 'classic' || control === 'modern') this.startMode(control);
     };
     const stopTouch = subscribeControls(control => {
@@ -213,6 +231,7 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     setPauseOpen(false);
     setControlScreen('battle');
+    updateSoundControls();
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
     this.hud = new LcdHud(this, this.mode);
@@ -232,7 +251,10 @@ export class BattleScene extends Phaser.Scene {
       if (control && ['left', 'right', 'up', 'down', 'missile'].includes(control)) {
         event.preventDefault();
       }
-      if (control === 'menu') { this.handleControl('menu', event.repeat); return; }
+      if (control === 'menu' || control === 'sound') {
+        this.handleControl(control, event.repeat);
+        return;
+      }
       if (this.paused) return;
 
       // Stage warps are keyboard-only and may be entered during submarine entry.
@@ -255,6 +277,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleControl(control: GameControl, repeated = false): void {
+    if (control === 'sound') {
+      if (!repeated) { soundBank.toggleMute(); updateSoundControls(); }
+      return;
+    }
     if (control === 'menu') {
       if (repeated) return;
       if (this.paused) this.resumeGame();
@@ -331,8 +357,14 @@ export class BattleScene extends Phaser.Scene {
     this.torpedo = null;
   }
 
+  private playSfx(name: SoundId): void {
+    const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
+    soundBank.play(audio.context, name);
+  }
+
   private playEntryChirp(pose: 0 | 1 | 2): void {
     // Emit one short oscillator chirp for each submarine entry position.
+    if (soundBank.muted) return;
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
     if (!context || context.state !== 'running') return;
@@ -471,6 +503,8 @@ export class BattleScene extends Phaser.Scene {
     };
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
+    if (kind === 'sub') this.playSfx('enemySubAppear');
+    else if (kind === 'sweeper') this.playSfx('boatAppear');
   }
 
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
@@ -540,6 +574,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.lastLaunchX = PLAYER_COLUMNS[this.columns];
     this.lastLaunchTime = this.elapsed * 1000;
+    this.playSfx('missileLaunch');
   }
 
   private firePlayerTorpedo(): void {
@@ -562,6 +597,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.lastLaunchX = PLAYER_COLUMNS[this.columns];
     this.lastLaunchTime = this.elapsed * 1000;
+    this.playSfx('torpedoLaunch');
   }
 
   private setBombAppearance(shot: Shot, flight: ClassicBombFlight | null, lateralSpeed: number): void {
@@ -617,6 +653,7 @@ export class BattleScene extends Phaser.Scene {
       const shot = this.addShot(kind, x, y, vx, vy, enemy);
       this.setBombAppearance(shot, null, vx);
     }
+    this.playSfx('enemyWeaponDrop');
     enemy.nextShotAt = this.mode === 'classic' && enemy.kind === 'plane'
       ? this.elapsed * 1000 + (5 + Math.floor(Math.random() * 5)) * classicTickMs(this.cycle)
       : this.elapsed * 1000 + 1500 + Math.random() * 2200;
@@ -635,8 +672,15 @@ export class BattleScene extends Phaser.Scene {
 
   private awardPoints(points: number): void {
     const result = applyScore(this.score, this.playerLives, points, LIVES);
+    const lifeAwarded = result.lives > this.playerLives;
     this.score = result.score;
     this.playerLives = result.lives;
+    // Let the kill sound begin before celebrating a restored life.
+    if (lifeAwarded) {
+      this.time.delayedCall(220, () => {
+        if (this.state === 'playing') this.playSfx('extraLife');
+      });
+    }
     sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
     this.drawHud();
   }
@@ -655,6 +699,7 @@ export class BattleScene extends Phaser.Scene {
         : (5500 + Math.random() * 1500) / scale);
     }
     if (destroyed) {
+      this.playSfx('enemyDestroyed');
       this.awardPoints(enemy.kind === 'plane' ? 100 : enemy.kind === 'sweeper' ? 150 : 200);
       const debrisTexture = enemy.kind === 'plane' ? 'planeDebris' :
         enemy.kind === 'sweeper' ? 'sweeperDebris' : 'enemySubDebris';
@@ -670,6 +715,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** The original starburst is reserved for projectile interceptions. */
   private explode(x: number, y: number): void {
+    this.playSfx('missileIntercept');
     const star = this.add.image(x, y, 'star').setDepth(12).setScale(1.4);
     this.tweens.add({ targets: star, scale: 0.7, duration: 200, onComplete: () => star.destroy() });
   }
@@ -694,6 +740,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.banner);
     this.banner.setVisible(false);
     this.playerLives--;
+    this.playSfx('playerDestroyed');
     this.showDebris(this.player.x, this.player.y, 'playerDebris', this.player.flipX);
     this.player.setVisible(false);
     this.drawHud();
@@ -703,6 +750,7 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
         if (this.state !== 'exploding') return;
         this.state = 'gameOver';
+        this.playSfx('gameOver');
         this.tweens.pauseAll();
         this.gameOverHint.setVisible(true);
         this.drawHud();
