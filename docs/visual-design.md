@@ -39,6 +39,6 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - **Classic:** six horizontal columns shared by three sky rows, one surface row and two underwater rows. Aircraft advance once every four shared clock ticks and surface escorts once every eight ticks. Aircraft altitude changes select a fixed silhouette; a blocked altitude change uses the actual resulting row.
 - **Modern:** sprites retain the same artwork while enemies move continuously. Aircraft use fixed level, climb and bank textures during smooth vertical movement.
 - Missiles travel vertically and torpedoes horizontally. Projectile collisions use logical hitboxes rather than opaque-pixel sampling; see `src/collision.ts` and `src/classic-grid.ts`.
-- Entry sound: three short WebAudio oscillator chirps, one per submarine entry position.
+- Entry sound: the original three single chirps are replaced with a restrained low-pulse motif: two short notes at each of the first two entry positions, one lower sustained note at the last. The visual movement and 2.1-second step interval are unchanged.
 - Procedural effects for launch, interception, enemy destruction, incoming weapons and player loss come from editable sound presets. A surface escort sounds once when it appears; a restored life triggers a reward after the kill; GAME OVER sounds after the final player explosion. Alternate missile/torpedo launches and aircraft approach/dive effects remain inactive drafts.
 
