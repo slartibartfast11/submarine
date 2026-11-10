@@ -251,7 +251,10 @@ export class BattleScene extends Phaser.Scene {
       if (control && ['left', 'right', 'up', 'down', 'missile'].includes(control)) {
         event.preventDefault();
       }
-      if (control === 'menu') { this.handleControl('menu', event.repeat); return; }
+      if (control === 'menu' || control === 'sound') {
+        this.handleControl(control, event.repeat);
+        return;
+      }
       if (this.paused) return;
 
       // Stage warps are keyboard-only and may be entered during submarine entry.
