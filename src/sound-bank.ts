@@ -16,8 +16,8 @@ class SoundBank {
     return this.muted;
   }
 
-  play(context: AudioContext | undefined, name: SoundId): void {
-    if (this.muted || !context || context.state !== 'running') return;
+  play(context: AudioContext | undefined, name: SoundId): AudioBufferSourceNode | null {
+    if (this.muted || !context || context.state !== 'running') return null;
     let cache = this.caches.get(context);
     if (!cache) {
       cache = new Map();
@@ -45,12 +45,14 @@ class SoundBank {
       missileLaunch: 0.11, missileLaunchAlternate: 0.11,
       missileIntercept: 0.13, enemySubAppear: 0.12, enemyWeaponDrop: 0.075,
       extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
+      entryBaaaa: 0.11, entryBoo: 0.095, entryBooSecond: 0.095, entryFinal: 0.13,
     };
     volume.gain.value = gains[name] ?? 0.1;
     source.buffer = buffer;
     source.connect(volume).connect(output);
     source.onended = () => { source.disconnect(); volume.disconnect(); };
     source.start();
+    return source;
   }
 }
 
