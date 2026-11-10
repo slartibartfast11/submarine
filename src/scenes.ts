@@ -305,6 +305,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.paused = false;
+      soundBank.stopBombFall();
       setPauseOpen(false);
       this.input.keyboard?.off('keydown', onKey);
       stopTouch();
@@ -350,6 +351,7 @@ export class BattleScene extends Phaser.Scene {
   private pauseGame(): void {
     if (this.paused) return;
     this.paused = true;
+    soundBank.stopBombFall();
     // Pause the scene clock and tweens, including delayed entry and death callbacks.
     this.scene.pause();
     setPauseOpen(true);
@@ -646,6 +648,7 @@ export class BattleScene extends Phaser.Scene {
 
     const kind: ShotKind = enemy.kind === 'sub' ? 'enemyTorpedo' :
       enemy.kind === 'plane' ? 'bomb' : 'charge';
+    let fallingBomb: Shot | null = null;
     if (this.mode === 'classic') {
       const halfColumn = enemy.gridColumn * 2 +
         (enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : 0) : Math.floor(Math.random() * 2));
@@ -663,6 +666,7 @@ export class BattleScene extends Phaser.Scene {
         shot.bombFlight = classicBombFlight(Math.random());
         shot.driftDirection = Math.random() < 0.5 ? -1 : 1;
         this.setBombAppearance(shot, shot.bombFlight, shot.driftDirection);
+        fallingBomb = shot;
       }
       if (enemy.kind === 'sub') enemy.shotsFired++;
     } else {
@@ -683,14 +687,21 @@ export class BattleScene extends Phaser.Scene {
       }
       const shot = this.addShot(kind, x, y, vx, vy, enemy);
       this.setBombAppearance(shot, null, vx);
+      if (kind === 'bomb') fallingBomb = shot;
     }
-    this.playSfx('enemyWeaponDrop');
+    if (fallingBomb) {
+      const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
+      soundBank.startBombFall(audio.context, fallingBomb);
+    } else {
+      this.playSfx('enemyWeaponDrop');
+    }
     enemy.nextShotAt = this.mode === 'classic' && enemy.kind === 'plane'
       ? this.elapsed * 1000 + (5 + Math.floor(Math.random() * 5)) * classicTickMs(this.cycle)
       : this.elapsed * 1000 + 1500 + Math.random() * 2200;
   }
 
   private destroyShot(shot: Shot): void {
+    if (shot.kind === 'bomb') soundBank.stopBombFall(shot);
     shot.image.destroy();
     this.shots = this.shots.filter((s) => s !== shot);
     if (shot === this.missile) this.missile = null;
@@ -768,6 +779,7 @@ export class BattleScene extends Phaser.Scene {
   private hitPlayer(): void {
     if (this.state !== 'playing') return;
     this.state = 'exploding';
+    soundBank.stopBombFall();
     this.tweens.killTweensOf(this.banner);
     this.banner.setVisible(false);
     this.playerLives--;

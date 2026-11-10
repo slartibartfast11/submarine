@@ -73,3 +73,17 @@ test('the second missile candidate remains distinct from the selected effect', (
   const alternate = renderSfx(SFX_PRESETS.missileLaunchAlternate, 16000);
   assert.notDeepEqual(primary, alternate);
 });
+
+test('aircraft falling-bomb sound uses the selected longer whistle', () => {
+  const preset = SFX_PRESETS.aircraftBombFall;
+  assert.equal(preset.wave, 2);
+  assert.equal(preset.freq, 950);
+  assert.equal(preset.slide, -1.8);
+  assert.equal(preset.dslide, -0.65);
+  assert.equal(preset.minFreq, 90);
+  assert.equal(preset.sustain, 0.85);
+  assert.equal(preset.decay, 0.35);
+  const pcm = renderSfx(preset, 10000);
+  assert.equal(pcm.length, Math.ceil((preset.attack + preset.sustain + preset.decay) * 10000));
+  assert.ok(pcm.some(value => Math.abs(value) > 0.005));
+});
