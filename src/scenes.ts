@@ -21,6 +21,7 @@ import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
 import { soundBank } from './sound-bank';
+import { aircraftMotionCue, type AircraftVerticalMotion } from './aircraft-audio';
 import { ENTRY_SEQUENCE, ENTRY_COMPLETE_MS } from './entry-cues';
 import type { SoundId } from './sfx-presets';
 import {
@@ -72,6 +73,7 @@ type Enemy = {
   subPattern: SubPattern;
   spawnedAt: number;
   initialGridRow: number;
+  lastVerticalMotion: AircraftVerticalMotion;
 };
 
 type Shot = {
@@ -235,7 +237,7 @@ export class BattleScene extends Phaser.Scene {
   private entrySources: AudioBufferSourceNode[] = [];
   private paused = false;
   private entryGeneration = 0;
-  private planesThatDived = new WeakSet<Enemy>();
+  private aircraftEnteredThisStep = false;
 
   constructor() { super('battle'); }
 
@@ -246,7 +248,7 @@ export class BattleScene extends Phaser.Scene {
     this.entrySources = [];
     this.paused = false;
     this.entryGeneration = 0;
-    this.planesThatDived = new WeakSet<Enemy>();
+    this.aircraftEnteredThisStep = false;
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -538,23 +540,27 @@ export class BattleScene extends Phaser.Scene {
       subPattern: chooseSubPattern(Math.random()),
       spawnedAt: this.elapsed * 1000,
       initialGridRow: gridRow,
+      lastVerticalMotion: 0,
     };
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
     if (kind === 'sub') this.playSfx('enemySubAppear');
     else if (kind === 'sweeper') this.playSfx('boatAppear');
     else {
+      // Arrival has priority if another plane changes attitude on the same tick.
+      this.aircraftEnteredThisStep = true;
       const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
       soundBank.startAircraft(audio.context, enemy);
     }
   }
 
-  /** Only the plane currently owning the fly-in voice can replace it with a dive. */
-  private planeDived(enemy: Enemy): void {
-    if (this.planesThatDived.has(enemy)) return;
-    this.planesThatDived.add(enemy);
+  private planeChangedMotion(enemy: Enemy, next: AircraftVerticalMotion): void {
+    const cue = aircraftMotionCue(enemy.lastVerticalMotion, next);
+    enemy.lastVerticalMotion = next;
+    if (!cue || this.aircraftEnteredThisStep) return;
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
-    soundBank.aircraftDive(audio.context, enemy);
+    if (cue === 'dive') soundBank.aircraftDive(audio.context, enemy);
+    else soundBank.aircraftClimb(audio.context, enemy);
   }
 
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
@@ -873,7 +879,7 @@ export class BattleScene extends Phaser.Scene {
               const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
               const nextRow = classicPlaneRow(enemy.gridRow, delta);
               const actualVertical = nextRow - enemy.gridRow;
-              if (actualVertical > 0) this.planeDived(enemy);
+              this.planeChangedMotion(enemy, actualVertical);
               enemy.gridRow = nextRow;
               enemy.y = CLASSIC_ROW_Y[nextRow];
               const pose = planePoseForMotion(actualVertical, enemy.direction);
@@ -919,7 +925,7 @@ export class BattleScene extends Phaser.Scene {
             // Choose climbing, descending or level mask from vertical motion.
             const riseFall = Math.cos(angle);
             const vertical = riseFall > 0.6 ? 1 : riseFall < -0.6 ? -1 : 0;
-            if (vertical > 0) this.planeDived(enemy);
+            this.planeChangedMotion(enemy, vertical);
             const pose = planePoseForMotion(vertical, enemy.direction);
             enemy.image.setTexture(pose.texture).setFlipX(pose.flipX);
           }
@@ -1094,6 +1100,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private stepSimulation(movementSeconds: number, clockSeconds: number): void {
+    this.aircraftEnteredThisStep = false;
     this.elapsed += clockSeconds;
     const now = this.elapsed * 1000;
     const scale = speedScale(this.cycle);

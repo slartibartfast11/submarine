@@ -50,9 +50,13 @@ class SoundBank {
     this.aircraft.play(plane, () => this.startPlayback(context, 'planeApproachDraft')?.control ?? null);
   }
 
-  /** A dive replaces only this aircraft's own fly-in sound. */
+  /** Motion cues from any aircraft replace the current aircraft voice. */
   aircraftDive(context: AudioContext | undefined, plane: object): void {
-    this.aircraft.change(plane, () => this.startPlayback(context, 'planeDiveDraft')?.control ?? null);
+    this.aircraft.play(plane, () => this.startPlayback(context, 'planeDiveDraft')?.control ?? null);
+  }
+
+  aircraftClimb(context: AudioContext | undefined, plane: object): void {
+    this.aircraft.play(plane, () => this.startPlayback(context, 'planeApproachDraft')?.control ?? null);
   }
 
   stopAircraft(plane?: object): void {
