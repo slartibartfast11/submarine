@@ -21,6 +21,7 @@ import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
 import { soundBank } from './sound-bank';
+import { ENTRY_CUES } from './entry-cues';
 import type { SoundId } from './sfx-presets';
 import {
   keyToControl, setControlScreen, setPauseOpen, subscribeControls, type GameControl,
@@ -197,7 +198,7 @@ export class BattleScene extends Phaser.Scene {
   private banner!: Phaser.GameObjects.Text;
   private warpSequence = '';
   private startWarp: StagePosition | null = null;
-  private entryTone: OscillatorNode | null = null;
+  private entrySources: AudioBufferSourceNode[] = [];
   private paused = false;
   private entryGeneration = 0;
 
@@ -207,7 +208,7 @@ export class BattleScene extends Phaser.Scene {
     this.mode = data.mode === 'dynamic' ? 'dynamic' : 'classic';
     this.startWarp = data.warp ?? null;
     this.warpSequence = '';
-    this.entryTone = null;
+    this.entrySources = [];
     this.paused = false;
     this.entryGeneration = 0;
     this.cycle = 1;
@@ -273,6 +274,7 @@ export class BattleScene extends Phaser.Scene {
       setPauseOpen(false);
       this.input.keyboard?.off('keydown', onKey);
       stopTouch();
+      this.stopEntryCue();
     });
   }
 
@@ -362,35 +364,27 @@ export class BattleScene extends Phaser.Scene {
     soundBank.play(audio.context, name);
   }
 
-  private playEntryChirp(pose: 0 | 1 | 2): void {
-    // Emit one short oscillator chirp for each submarine entry position.
-    if (soundBank.muted) return;
+  private stopEntryCue(): void {
+    for (const source of this.entrySources) {
+      try { source.stop(); } catch { /* The note may already have ended. */ }
+    }
+    this.entrySources = [];
+  }
+
+  private playEntryCue(pose: 0 | 1 | 2): void {
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
     if (!context || context.state !== 'running') return;
-    const tone = context.createOscillator();
-    const volume = context.createGain();
-    const time = context.currentTime;
-    const pitch = [410, 430, 370][pose];
-    const duration = pose === 2 ? 0.22 : 0.16;
-    tone.type = 'square';
-    tone.frequency.setValueAtTime(pitch, time);
-    tone.frequency.setValueAtTime(pitch * 0.92, time + 0.055);
-    tone.frequency.exponentialRampToValueAtTime(pitch * 0.71, time + duration);
-    volume.gain.setValueAtTime(0.0001, time);
-    volume.gain.linearRampToValueAtTime(0.012, time + 0.008);
-    volume.gain.setValueAtTime(0.010, time + 0.045);
-    volume.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-    tone.connect(volume);
-    volume.connect(context.destination);
-    tone.start(time);
-    tone.stop(time + duration + 0.012);
-    this.entryTone = tone;
-    tone.onended = () => { if (this.entryTone === tone) this.entryTone = null; };
+    const at = context.currentTime;
+    for (const note of ENTRY_CUES[pose]) {
+      const source = soundBank.play(context, note.sound, at + note.offset);
+      if (source) this.entrySources.push(source);
+    }
   }
 
   private beginEntry(): void {
     // Every new submarine enters on the lower lane: 5 -> 4 -> 3, then controls unlock.
+    this.stopEntryCue();
     this.state = 'entering';
     const generation = ++this.entryGeneration;
     this.stageKills = 0;
@@ -403,18 +397,18 @@ export class BattleScene extends Phaser.Scene {
     this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1]);
     this.gameOverHint.setVisible(false);
     this.drawHud();
-    this.playEntryChirp(0);
+    this.playEntryCue(0);
     this.time.delayedCall(ENTRY_STEP_MS, () => {
       if (this.state !== 'entering' || generation !== this.entryGeneration) return;
       this.columns = 3;
       this.player.x = PLAYER_COLUMNS[3];
-      this.playEntryChirp(1);
+      this.playEntryCue(1);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 2, () => {
       if (this.state !== 'entering' || generation !== this.entryGeneration) return;
       this.columns = 2;
       this.player.x = PLAYER_COLUMNS[2];
-      this.playEntryChirp(2);
+      this.playEntryCue(2);
     });
     this.time.delayedCall(ENTRY_STEP_MS * 3, () => {
       if (this.state !== 'entering' || generation !== this.entryGeneration) return;
@@ -424,11 +418,8 @@ export class BattleScene extends Phaser.Scene {
 
   private warpTo(target: StagePosition): void {
     if (this.state === 'exploding' || this.state === 'gameOver') return;
-    // Stop the current chirp when a stage warp interrupts entry.
-    if (this.entryTone) {
-      try { this.entryTone.stop(); } catch { /* Audio may have already stopped. */ }
-      this.entryTone = null;
-    }
+    // An interrupted entry must not leave scheduled notes behind.
+    this.stopEntryCue();
     ++this.entryGeneration;
     this.clearBattlefield();
     this.cycle = target.cycle;
