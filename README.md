@@ -14,6 +14,7 @@ Two ways to play: **Classic** has the stepped movement and fixed silhouettes of 
 | Arrow keys / `W A S D` | Move left, right or between the two depths |
 | `Space` | Fire a missile |
 | `X` | Fire a torpedo (submarine stages only) |
+| `M` | Sound on / off |
 | `Esc` | Pause / menu |
 
 On phones and tablets, use the on-screen controls. Landscape orientation gives more room to play.
@@ -45,6 +46,8 @@ For development reference, see the [gameplay manifest](docs/manifest.md) and [vi
 ## Credits
 
 Inspired by Casio's *Submarine Battle*. This is an independent project, not affiliated with or endorsed by Casio.
+
+Sound presets made with [Gufobyte SFX Lab](https://gufobyte.itch.io/sfx-lab). Submarine uses its own synthesizer to play them.
 
 ## Licence
 
