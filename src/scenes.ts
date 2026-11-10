@@ -155,7 +155,9 @@ export class MenuScene extends Phaser.Scene {
       if (muted) stopFanfare();
       else playFanfare();
     });
-    if (!soundBank.muted) playFanfare();
+    // SceneManager emits CREATE after marking this scene RUNNING.
+    // Calling playFanfare() directly in create() fails its isActive() guard.
+    this.events.once(Phaser.Scenes.Events.CREATE, playFanfare);
 
     const soundText = addLabel(this, 871, 515, soundBank.muted ? 'SOUND OFF' : 'SOUND ON', 15)
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
