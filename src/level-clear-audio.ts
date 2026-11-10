@@ -8,8 +8,11 @@ type AudioPlayer = Pick<HTMLAudioElement, 'play' | 'pause' | 'paused' | 'muted' 
 /** One short musical voice; independent of procedural effects and game simulation. */
 export class LevelClearAudio {
   private resumeAfterPause = false;
+  private readonly player: AudioPlayer;
 
-  constructor(private readonly player: AudioPlayer) {}
+  constructor(player: AudioPlayer) {
+    this.player = player;
+  }
 
   play(): void {
     if (this.player.muted) return;
