@@ -9,9 +9,10 @@
 | Arrow keys or `W A S D` | Move left, right, up or down |
 | `Space` | Fire a missile |
 | `X` | Fire a torpedo, once unlocked |
+| `M` | Sound on / off |
 | `Esc` | Pause / menu |
 
-On touchscreens, use the on-screen direction pad, **MISSILE** and **TORPEDO** buttons. The separate **PAUSE / MENU** button freezes the game and offers **Continue** or **Main Menu**. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
+On touchscreens, use the on-screen direction pad, **MISSILE** and **TORPEDO** buttons. The separate **PAUSE / MENU** button freezes the game and offers **Continue**, **Sound On / Off** or **Main Menu**. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
 
 Your submarine moves between **six positions** across the screen and **two depths** underwater.
 
