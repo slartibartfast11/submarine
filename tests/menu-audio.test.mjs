@@ -35,3 +35,11 @@ test('storage denial does not break sound or make a new player permanently muted
   assert.equal(readSoundMuted(null), false);
   assert.doesNotThrow(() => writeSoundMuted(null, true));
 });
+
+test('menu fanfare waits for the running scene before trying automatic playback', () => {
+  // Phaser invokes Scene.create() in CREATING, then emits CREATE after switching
+  // the scene to RUNNING. isActive() in the playback guard needs that transition.
+  const scenes = readFileSync(new URL('../src/scenes.ts', import.meta.url), 'utf8');
+  assert.match(scenes, /this\.events\.once\(Phaser\.Scenes\.Events\.CREATE, playFanfare\)/);
+  assert.doesNotMatch(scenes, /if \(!soundBank\.muted\) playFanfare\(\)/);
+});
