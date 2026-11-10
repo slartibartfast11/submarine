@@ -4,6 +4,8 @@ A browser game inspired by Casio's *Submarine Battle*. Defend your submarine aga
 
 **[Play Submarine](https://slartibartfast11.github.io/submarine/)**
 
+An original four-second FM fanfare plays on the title screen when your browser allows it. Use **P** or **PLAY INTRO** to replay it. Sound-off is remembered on this device; no accounts or tracking.
+
 Two ways to play: **Classic** has the stepped movement and fixed silhouettes of an LCD handheld; **Modern** gives enemies smoother movement. Both have the same rules and controls.
 
 ## Controls
