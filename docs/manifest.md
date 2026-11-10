@@ -16,6 +16,7 @@ For the player-facing rules, see [How to play](gameplay-rules.md). For rendering
 - **Stage progression:** a stage advances only when enough enemies of its designated kind are destroyed. Other kills still score points. Survival time alone never advances a stage.
 - **Lives:** a run starts with three submarines. Each loss records another X. A surviving replacement re-enters at the lower depth and resets the current stage's kill count, preserving score and remaining lives. The final loss freezes gameplay; only `Esc` returns to the menu. Gameplay keys do not restart a finished run.
 - **High score:** kept for this browser page's lifetime in module memory, not persisted to browser storage.
+- **Sound:** procedural effects use an independent renderer with Gufobyte SFX Lab-compatible JSON presets. Sound can be muted from the title screen, with `M`, or from the pause overlay. Sound state is session-only and independent of the game mode. The existing three entry chirps remain unchanged; the draft plane-dive preset and alternative missile preset are retained without being triggered.
 - **Scoring and replacements:** intercepted bombs, depth charges and enemy torpedoes are worth **10 points**; aircraft **100**, surface escorts **150**, enemy submarines **200**. Every crossed 10,000-point threshold restores one lost submarine up to the starting maximum of three. Threshold awards are consumed even if the player already has three lives; they do not carry over.
 
 Implementation: [`src/scenes.ts`](../src/scenes.ts), [`src/config.ts`](../src/config.ts), [`src/lcd.ts`](../src/lcd.ts).
@@ -104,6 +105,7 @@ Implementation: `beginEntry`, `warpTo`, `hitPlayer` in [`src/scenes.ts`](../src/
 | Sprites and texture geometry | `src/curved-art.ts`, `src/lcd-segments.ts`, `src/sprites.ts` | `tests/sprites.test.mjs` |
 | Bomb silhouette selection | `src/drop-appearance.ts`, `src/scenes.ts` | `tests/drop-appearance.test.mjs` |
 | Scene transitions, spawns, scoring, HUD and keyboard input | `src/scenes.ts`, `src/lcd.ts` | Primarily integration behaviour; not all paths have automated tests |
+| Procedural sound rendering and presets | `src/sfx-renderer.ts`, `src/sfx-presets.ts`, `src/sound-bank.ts` | `tests/sfx.test.mjs` |
 
 ## Maintenance contract
 
