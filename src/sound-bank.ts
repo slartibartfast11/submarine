@@ -1,9 +1,11 @@
 import { renderSfx } from './sfx-renderer';
 import { SFX_PRESETS, type SoundId } from './sfx-presets';
+import { ExclusiveSoundChannel, type StoppableSound } from './exclusive-sound';
 
 /** Sounds are generated once per AudioContext and replayed without network requests. */
 class SoundBank {
   muted = false;
+  private readonly bombFall = new ExclusiveSoundChannel();
   private caches = new WeakMap<AudioContext, Map<SoundId, AudioBuffer>>();
   private outputNodes = new WeakMap<AudioContext, GainNode>();
   private allOutputs = new Set<GainNode>();
@@ -17,7 +19,21 @@ class SoundBank {
   }
 
   play(context: AudioContext | undefined, name: SoundId): void {
-    if (this.muted || !context || context.state !== 'running') return;
+    this.startPlayback(context, name);
+  }
+
+  /** A new aircraft bomb restarts the single falling-bomb voice. */
+  startBombFall(context: AudioContext | undefined, bomb: object): void {
+    this.bombFall.play(bomb, () => this.startPlayback(context, 'aircraftBombFall'));
+  }
+
+  /** An older bomb must not silence a newer bomb's whistle. */
+  stopBombFall(bomb?: object): void {
+    this.bombFall.stop(bomb);
+  }
+
+  private startPlayback(context: AudioContext | undefined, name: SoundId): StoppableSound | null {
+    if (this.muted || !context || context.state !== 'running') return null;
     let cache = this.caches.get(context);
     if (!cache) {
       cache = new Map();
@@ -44,13 +60,32 @@ class SoundBank {
       enemyDestroyed: 0.18, playerDestroyed: 0.24, torpedoLaunch: 0.12,
       missileLaunch: 0.11, missileLaunchAlternate: 0.11,
       missileIntercept: 0.13, enemySubAppear: 0.12, enemyWeaponDrop: 0.075,
+      aircraftBombFall: 0.075,
       extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
     };
     volume.gain.value = gains[name] ?? 0.1;
     source.buffer = buffer;
     source.connect(volume).connect(output);
-    source.onended = () => { source.disconnect(); volume.disconnect(); };
+    let finished = false;
+    let stopping = false;
+    source.onended = () => {
+      finished = true;
+      source.disconnect();
+      volume.disconnect();
+    };
     source.start();
+    return {
+      stop: () => {
+        if (finished || stopping) return;
+        stopping = true;
+        // Brief fade prevents a click when a new bomb replaces the whistle.
+        const now = context.currentTime;
+        volume.gain.cancelScheduledValues(now);
+        volume.gain.setValueAtTime(volume.gain.value, now);
+        volume.gain.linearRampToValueAtTime(0, now + 0.008);
+        source.stop(now + 0.009);
+      },
+    };
   }
 }
 
