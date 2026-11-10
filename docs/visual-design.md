@@ -40,4 +40,5 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - **Modern:** sprites retain the same artwork while enemies move continuously. Aircraft use fixed level, climb and bank textures during smooth vertical movement.
 - Missiles travel vertically and torpedoes horizontally. Projectile collisions use logical hitboxes rather than opaque-pixel sampling; see `src/collision.ts` and `src/classic-grid.ts`.
 - Entry sound: three short WebAudio oscillator chirps, one per submarine entry position.
+- Procedural effects for launch, interception, enemy destruction, incoming weapons and player loss come from editable sound presets. The alternate missile launch and diving-plane effects are works in progress and are not active.
 
