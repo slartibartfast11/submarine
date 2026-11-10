@@ -1,6 +1,6 @@
 export type GameControl =
   | 'left' | 'right' | 'up' | 'down'
-  | 'missile' | 'torpedo' | 'menu' | 'resume' | 'quit' | 'classic' | 'modern';
+  | 'missile' | 'torpedo' | 'menu' | 'resume' | 'quit' | 'classic' | 'modern' | 'sound';
 
 export type ControlScreen = 'menu' | 'battle';
 
@@ -23,6 +23,7 @@ export function keyToControl(code: string): GameControl | null {
     case 'Space': return 'missile';
     case 'KeyX': return 'torpedo';
     case 'Escape': return 'menu';
+    case 'KeyM': return 'sound';
     case 'Digit1': case 'Numpad1': return 'classic';
     case 'Digit2': case 'Numpad2': return 'modern';
     default: return null;
