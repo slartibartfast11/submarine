@@ -102,8 +102,6 @@ function drawLandscape(scene: Phaser.Scene): void {
 
 
 export class MenuScene extends Phaser.Scene {
-  private fanfare: HTMLAudioElement | null = null;
-
   constructor() { super('menu'); }
 
   preload(): void {
@@ -136,7 +134,6 @@ export class MenuScene extends Phaser.Scene {
     const fanfare = new Audio();
     fanfare.preload = 'none';
     fanfare.volume = 0.42;
-    this.fanfare = fanfare;
     const stopFanfare = (): void => {
       fanfare.pause();
       try { fanfare.currentTime = 0; } catch { /* No decoded audio yet. */ }
@@ -149,7 +146,7 @@ export class MenuScene extends Phaser.Scene {
         // Autoplay is often blocked on first visit. User can tap PLAY INTRO.
       });
     };
-    const replayText = addLabel(this, 91, 515, 'PLAY INTRO', 15)
+    const replayText = addLabel(this, 91, 515, 'P  PLAY INTRO', 15)
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
     replayText.setAlpha(soundBank.muted ? 0.45 : 1);
     replayText.on('pointerdown', playFanfare);
@@ -181,6 +178,7 @@ export class MenuScene extends Phaser.Scene {
       if (warpSequence) return;
       const control = keyToControl(event.code);
       if (control === 'sound') { toggleSound(); return; }
+      if (event.code === 'KeyP') { playFanfare(); return; }
       if (control === 'classic' || control === 'modern') this.startMode(control);
     };
     const stopTouch = subscribeControls(control => {
@@ -193,7 +191,6 @@ export class MenuScene extends Phaser.Scene {
       stopMuteSubscription();
       stopFanfare();
       fanfare.removeAttribute('src');
-      this.fanfare = null;
     });
   }
 
