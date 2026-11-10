@@ -1,19 +1,28 @@
 import { renderSfx } from './sfx-renderer';
 import { SFX_PRESETS, type SoundId } from './sfx-presets';
+import { browserPreferenceStorage, readSoundMuted, writeSoundMuted } from './sound-preference';
 
 /** Sounds are generated once per AudioContext and replayed without network requests. */
 class SoundBank {
-  muted = false;
+  muted = readSoundMuted(browserPreferenceStorage());
+  private muteListeners = new Set<(muted: boolean) => void>();
   private caches = new WeakMap<AudioContext, Map<SoundId, AudioBuffer>>();
   private outputNodes = new WeakMap<AudioContext, GainNode>();
   private allOutputs = new Set<GainNode>();
 
   toggleMute(): boolean {
     this.muted = !this.muted;
+    writeSoundMuted(browserPreferenceStorage(), this.muted);
     for (const output of this.allOutputs) {
       output.gain.setTargetAtTime(this.muted ? 0 : 1, output.context.currentTime, 0.01);
     }
+    for (const listener of this.muteListeners) listener(this.muted);
     return this.muted;
+  }
+
+  subscribeMute(listener: (muted: boolean) => void): () => void {
+    this.muteListeners.add(listener);
+    return () => { this.muteListeners.delete(listener); };
   }
 
   play(context: AudioContext | undefined, name: SoundId): void {
