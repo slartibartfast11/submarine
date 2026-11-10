@@ -21,6 +21,7 @@ export const CLASSIC_SUB_LIFETIME_TICKS = 32;
 export const CLASSIC_TORPEDO_MOVE_TICKS = 2;
 export const DYNAMIC_TORPEDO_SPEED = 200;
 // Entry sequence: columns 5, 4, 3; one hold per position.
+// Period between entry phrases; the submarine moves 1170 ms into each phrase.
 export const ENTRY_STEP_MS = 2100;
 
 export function classicTickMs(cycle: number): number {
