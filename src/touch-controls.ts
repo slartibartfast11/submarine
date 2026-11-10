@@ -48,7 +48,7 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
     if (!button || !root.contains(button)) return;
     const control = button.dataset.control as GameControl | undefined;
     if (!control) return;
-    if (root.dataset.paused === 'true' && control !== 'resume' && control !== 'quit') return;
+    if (root.dataset.paused === 'true' && control !== 'resume' && control !== 'quit' && control !== 'sound') return;
 
     event.preventDefault();
     button.setPointerCapture(event.pointerId);
