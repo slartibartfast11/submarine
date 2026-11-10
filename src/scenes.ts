@@ -235,6 +235,7 @@ export class BattleScene extends Phaser.Scene {
   private entrySources: AudioBufferSourceNode[] = [];
   private paused = false;
   private entryGeneration = 0;
+  private planesThatDived = new WeakSet<Enemy>();
 
   constructor() { super('battle'); }
 
@@ -245,6 +246,7 @@ export class BattleScene extends Phaser.Scene {
     this.entrySources = [];
     this.paused = false;
     this.entryGeneration = 0;
+    this.planesThatDived = new WeakSet<Enemy>();
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -306,6 +308,7 @@ export class BattleScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.paused = false;
       soundBank.stopBombFall();
+      soundBank.stopAircraft();
       setPauseOpen(false);
       this.input.keyboard?.off('keydown', onKey);
       stopTouch();
@@ -352,6 +355,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.paused) return;
     this.paused = true;
     soundBank.stopBombFall();
+    soundBank.stopAircraft();
     // Pause the scene clock and tweens, including delayed entry and death callbacks.
     this.scene.pause();
     setPauseOpen(true);
@@ -387,6 +391,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private clearBattlefield(): void {
+    soundBank.stopAircraft();
     for (const shot of [...this.shots]) this.destroyShot(shot);
     for (const enemy of [...this.enemies]) this.removeEnemy(enemy, false);
     this.enemies = [];
@@ -538,6 +543,18 @@ export class BattleScene extends Phaser.Scene {
     this.enemies.push(enemy);
     if (kind === 'sub') this.playSfx('enemySubAppear');
     else if (kind === 'sweeper') this.playSfx('boatAppear');
+    else {
+      const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
+      soundBank.startAircraft(audio.context, enemy);
+    }
+  }
+
+  /** Only the plane currently owning the fly-in voice can replace it with a dive. */
+  private planeDived(enemy: Enemy): void {
+    if (this.planesThatDived.has(enemy)) return;
+    this.planesThatDived.add(enemy);
+    const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
+    soundBank.aircraftDive(audio.context, enemy);
   }
 
   private addShot(kind: ShotKind, x: number, y: number, vx: number, vy: number, owner: Enemy | null): Shot {
@@ -728,6 +745,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private removeEnemy(enemy: Enemy, destroyed: boolean): void {
+    if (enemy.kind === 'plane') soundBank.stopAircraft(enemy);
     this.enemies = this.enemies.filter((e) => e !== enemy);
     if (enemy.kind === 'plane' && !destroyed) {
       this.lastPlaneExit = { edge: exitEdge(enemy.direction), at: this.elapsed * 1000 };
@@ -780,6 +798,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.state !== 'playing') return;
     this.state = 'exploding';
     soundBank.stopBombFall();
+    soundBank.stopAircraft();
     this.tweens.killTweensOf(this.banner);
     this.banner.setVisible(false);
     this.playerLives--;
@@ -854,6 +873,7 @@ export class BattleScene extends Phaser.Scene {
               const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
               const nextRow = classicPlaneRow(enemy.gridRow, delta);
               const actualVertical = nextRow - enemy.gridRow;
+              if (actualVertical > 0) this.planeDived(enemy);
               enemy.gridRow = nextRow;
               enemy.y = CLASSIC_ROW_Y[nextRow];
               const pose = planePoseForMotion(actualVertical, enemy.direction);
@@ -898,9 +918,9 @@ export class BattleScene extends Phaser.Scene {
             enemy.y = enemy.baseY + Math.sin(angle) * 15;
             // Choose climbing, descending or level mask from vertical motion.
             const riseFall = Math.cos(angle);
-            const pose = planePoseForMotion(
-              riseFall > 0.6 ? 1 : riseFall < -0.6 ? -1 : 0, enemy.direction,
-            );
+            const vertical = riseFall > 0.6 ? 1 : riseFall < -0.6 ? -1 : 0;
+            if (vertical > 0) this.planeDived(enemy);
+            const pose = planePoseForMotion(vertical, enemy.direction);
             enemy.image.setTexture(pose.texture).setFlipX(pose.flipX);
           }
           if (enemy.x < -90 || enemy.x > SCREEN.width + 90) {

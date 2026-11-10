@@ -8,12 +8,17 @@ class SoundBank {
   muted = readSoundMuted(browserPreferenceStorage());
   private muteListeners = new Set<(muted: boolean) => void>();
   private readonly bombFall = new ExclusiveSoundChannel();
+  private readonly aircraft = new ExclusiveSoundChannel();
   private caches = new WeakMap<AudioContext, Map<SoundId, AudioBuffer>>();
   private outputNodes = new WeakMap<AudioContext, GainNode>();
   private allOutputs = new Set<GainNode>();
 
   toggleMute(): boolean {
     this.muted = !this.muted;
+    if (this.muted) {
+      this.bombFall.stop();
+      this.aircraft.stop();
+    }
     writeSoundMuted(browserPreferenceStorage(), this.muted);
     for (const output of this.allOutputs) {
       output.gain.setTargetAtTime(this.muted ? 0 : 1, output.context.currentTime, 0.01);
@@ -38,6 +43,20 @@ class SoundBank {
 
   stopBombFall(bomb?: object): void {
     this.bombFall.stop(bomb);
+  }
+
+  /** Aircraft share a single voice. The newest plane interrupts the last. */
+  startAircraft(context: AudioContext | undefined, plane: object): void {
+    this.aircraft.play(plane, () => this.startPlayback(context, 'planeApproachDraft')?.control ?? null);
+  }
+
+  /** A dive replaces only this aircraft's own fly-in sound. */
+  aircraftDive(context: AudioContext | undefined, plane: object): void {
+    this.aircraft.change(plane, () => this.startPlayback(context, 'planeDiveDraft')?.control ?? null);
+  }
+
+  stopAircraft(plane?: object): void {
+    this.aircraft.stop(plane);
   }
 
   private startPlayback(
@@ -71,6 +90,7 @@ class SoundBank {
       missileLaunch: 0.11, missileLaunchAlternate: 0.11,
       missileIntercept: 0.13, enemySubAppear: 0.12, enemyWeaponDrop: 0.075,
       aircraftBombFall: 0.075,
+      planeApproachDraft: 0.085, planeDiveDraft: 0.085,
       extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
       entryBaaaa: 0.11, entryBoo: 0.095, entryBooSecond: 0.095, entryFinal: 0.13,
     };
