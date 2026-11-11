@@ -174,7 +174,6 @@ export class DemoController {
 
   decide(snapshot: DemoSnapshot, elapsedMs: number): DemoAction[] {
     const actions: DemoAction[] = [];
-    const playerX = PLAYER_COLUMNS[snapshot.column];
     let nextColumn = snapshot.column;
     let nextDepth = snapshot.depth;
     let nextFacing = snapshot.facing;
