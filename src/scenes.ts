@@ -583,7 +583,7 @@ export class BattleScene extends Phaser.Scene {
     // Start after the killing shot's effect; never hold up stage progression.
     const generation = this.levelClearGeneration;
     this.time.delayedCall(LEVEL_CLEAR_DELAY_MS, () => {
-      if (this.state === 'playing' && generation === this.levelClearGeneration) {
+      if (!this.demo && this.state === 'playing' && generation === this.levelClearGeneration) {
         this.levelClearAudio?.play();
       }
     });
