@@ -1,5 +1,5 @@
-import { PLAYER_DEPTHS, type GameMode } from './config';
-import { CLASSIC_SUB_ROWS } from './classic-grid';
+import { PLAYER_DEPTHS, type GameMode } from './config.ts';
+import { CLASSIC_SUB_ROWS } from './classic-grid.ts';
 
 /** The two hulls have half-heights of 15 and 12 px; leave a little clearance. */
 export const SUBMARINE_VERTICAL_CLEARANCE = 32;
