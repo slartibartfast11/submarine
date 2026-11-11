@@ -61,7 +61,8 @@ main { width: min(100vw, 1100px); padding: clamp(6px, 2vw, 24px); }
   cursor: pointer;
   touch-action: manipulation;
 }
-.pause-panel .pause-continue { background: #b4c4a9; }
+.pause-panel .pause-continue, .pause-panel .pause-retry { background: #b4c4a9; }
+.pause-panel .touch-key[hidden] { display: none; }
 .pause-panel .touch-key:focus-visible { outline: 3px solid #26372d; outline-offset: 2px; }
 .pause-panel .touch-key:active, .pause-panel .touch-key.is-held {
   background: #52634e;

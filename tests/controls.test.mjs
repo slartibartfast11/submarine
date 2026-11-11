@@ -55,3 +55,17 @@ test('pause visibility updates subscribers and supports cleanup', () => {
   setPauseOpen(false);
   assert.deepEqual(shown, [false, true, false]);
 });
+
+test('game-over overlay state replaces Continue with Play Again and resets on close', () => {
+  const states = [];
+  const stop = subscribePauseOpen((open, gameOver) => states.push([open, gameOver]));
+  setPauseOpen(true, true);
+  setPauseOpen(true, true);
+  setPauseOpen(false);
+  setPauseOpen(true);
+  setPauseOpen(false);
+  stop();
+  assert.deepEqual(states, [
+    [false, false], [true, true], [false, false], [true, false], [false, false],
+  ]);
+});
