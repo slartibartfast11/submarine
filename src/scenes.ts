@@ -148,7 +148,7 @@ export class MenuScene extends Phaser.Scene {
     };
     modeButton(321, 'classic', '1', 'CLASSIC', 'LCD HANDHELD STYLE');
     modeButton(639, 'modern', '2', 'MODERN', 'ARCADE STYLE');
-    addLabel(this, 480, 518, 'TAP A MODE OR PRESS 1 / 2', 15).setOrigin(0.5);
+    addLabel(this, 480, 515, 'TAP A MODE OR PRESS 1 / 2', 15).setOrigin(0.5);
     // A real audio asset, independent of the gameplay sound-effects synthesizer.
     // Browsers may block playback until a gesture; the replay control handles that.
     const fanfare = new Audio();
@@ -412,7 +412,8 @@ export class BattleScene extends Phaser.Scene {
       else this.pauseGame();
       return;
     }
-    if (control === 'resume') { if (this.paused) this.resumeGame(); return; }
+    if (control === 'resume') { if (this.paused && this.state !== 'gameOver') this.resumeGame(); return; }
+    if (control === 'retry') { if (!repeated) this.playAgain(); return; }
     if (control === 'quit') { if (this.paused) this.returnToMenu(); return; }
     if (this.paused || this.state !== 'playing') return;
     if (control === 'left') {
@@ -446,7 +447,7 @@ export class BattleScene extends Phaser.Scene {
     soundBank.stopAircraft();
     // Pause the scene clock and tweens, including delayed entry and death callbacks.
     this.scene.pause();
-    setPauseOpen(true);
+    setPauseOpen(true, this.state === 'gameOver' && !this.demo);
   }
 
   private resumeGame(): void {
@@ -455,6 +456,16 @@ export class BattleScene extends Phaser.Scene {
     setPauseOpen(false);
     this.scene.resume();
     this.levelClearAudio?.resume();
+  }
+
+  private playAgain(): void {
+    // Only an explicit Game Over menu choice can start another human run.
+    if (!this.paused || this.state !== 'gameOver' || this.demo) return;
+    this.paused = false;
+    setPauseOpen(false);
+    // Resume the frozen scene before switching, so shutdown cleans up normally.
+    this.scene.resume();
+    this.scene.start('battle', { mode: this.mode });
   }
 
   private returnToMenu(): void {

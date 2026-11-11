@@ -28,11 +28,16 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
 
   const overlay = root.querySelector<HTMLElement>('.pause-overlay');
   const resumeButton = root.querySelector<HTMLButtonElement>('.pause-continue');
-  const stopPauseSubscription = subscribePauseOpen(open => {
+  const retryButton = root.querySelector<HTMLButtonElement>('.pause-retry');
+  const pauseHeading = root.querySelector<HTMLElement>('#pause-heading');
+  const stopPauseSubscription = subscribePauseOpen((open, gameOver) => {
     releaseAll();
     root.dataset.paused = String(open);
     if (overlay) overlay.hidden = !open;
-    if (open) resumeButton?.focus();
+    if (pauseHeading) pauseHeading.textContent = gameOver ? 'GAME OVER' : 'GAME PAUSED';
+    if (resumeButton) resumeButton.hidden = gameOver;
+    if (retryButton) retryButton.hidden = !gameOver;
+    if (open) (gameOver ? retryButton : resumeButton)?.focus();
   });
 
   const stopScreenSubscription = subscribeControlScreen(screen => {
@@ -48,7 +53,7 @@ export function installTouchControls(root: HTMLElement, onUserGesture: () => voi
     if (!button || !root.contains(button)) return;
     const control = button.dataset.control as GameControl | undefined;
     if (!control) return;
-    if (root.dataset.paused === 'true' && control !== 'resume' && control !== 'quit' && control !== 'sound') return;
+    if (root.dataset.paused === 'true' && control !== 'resume' && control !== 'retry' && control !== 'quit' && control !== 'sound') return;
 
     event.preventDefault();
     button.setPointerCapture(event.pointerId);

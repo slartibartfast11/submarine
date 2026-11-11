@@ -1,18 +1,19 @@
 export type GameControl =
   | 'left' | 'right' | 'up' | 'down'
-  | 'missile' | 'torpedo' | 'menu' | 'resume' | 'quit' | 'classic' | 'modern' | 'sound';
+  | 'missile' | 'torpedo' | 'menu' | 'resume' | 'retry' | 'quit' | 'classic' | 'modern' | 'sound';
 
 export type ControlScreen = 'menu' | 'battle';
 
 type ControlListener = (control: GameControl, repeated: boolean) => void;
 type ScreenListener = (screen: ControlScreen) => void;
-type PauseListener = (paused: boolean) => void;
+type PauseListener = (paused: boolean, gameOver: boolean) => void;
 
 const controlListeners = new Set<ControlListener>();
 const screenListeners = new Set<ScreenListener>();
 const pauseListeners = new Set<PauseListener>();
 let activeScreen: ControlScreen = 'menu';
 let pauseOpen = false;
+let pauseGameOver = false;
 
 export function keyToControl(code: string): GameControl | null {
   switch (code) {
@@ -44,15 +45,17 @@ export function setControlScreen(screen: ControlScreen): void {
   for (const listener of [...screenListeners]) listener(screen);
 }
 
-export function setPauseOpen(open: boolean): void {
-  if (pauseOpen === open) return;
+export function setPauseOpen(open: boolean, gameOver = false): void {
+  const nextGameOver = open && gameOver;
+  if (pauseOpen === open && pauseGameOver === nextGameOver) return;
   pauseOpen = open;
-  for (const listener of [...pauseListeners]) listener(open);
+  pauseGameOver = nextGameOver;
+  for (const listener of [...pauseListeners]) listener(open, nextGameOver);
 }
 
 export function subscribePauseOpen(listener: PauseListener): () => void {
   pauseListeners.add(listener);
-  listener(pauseOpen);
+  listener(pauseOpen, pauseGameOver);
   return () => { pauseListeners.delete(listener); };
 }
 
