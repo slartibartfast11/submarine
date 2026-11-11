@@ -11,6 +11,10 @@ import {
 } from './config';
 import { installSprites, createEtchedImage } from './sprites';
 import {
+  ATTRACT_IDLE_MS, DEMO_RUN_MS, DEMO_GAME_OVER_MS,
+  DemoController, demoSelection, seededRandom, type DemoShot,
+} from './demo-controller';
+import {
   DEBRIS_HOLD_MS, DEBRIS_FADE_MS, PLAYER_DEBRIS_MULTIPLIER, PLAYER_DEATH_PAUSE_MS,
 } from './debris-timing';
 import { modernMissileInterceptsDrop, sweptBoxesOverlap, type Box } from './collision';
@@ -104,6 +108,17 @@ function drawLandscape(scene: Phaser.Scene): void {
   drawLcdBackdrop(scene);
 }
 
+/** Any demo can be reproduced locally with ?demoSeed=<unsigned integer>. */
+function launchDemo(scene: Phaser.Scene): void {
+  const rawSeed = new URLSearchParams(window.location.search).get('demoSeed');
+  const suppliedSeed = rawSeed !== null && /^\\d+$/.test(rawSeed) ? Number(rawSeed) : NaN;
+  const seed = Number.isSafeInteger(suppliedSeed) && suppliedSeed >= 0 && suppliedSeed <= 0xffffffff
+    ? suppliedSeed : Math.floor(Math.random() * 0x100000000);
+  const selection = demoSelection(seed);
+  console.info(`[Submarine demo] seed=${seed} mode=${selection.mode} stage=1-${selection.stage}; repeat with ?demoSeed=${seed}`);
+  scene.scene.start('battle', { ...selection, demoStage: selection.stage, demo: true, demoSeed: seed });
+}
+
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
@@ -172,7 +187,13 @@ export class MenuScene extends Phaser.Scene {
     };
     soundText.on('pointerdown', toggleSound);
     let warpSequence = '';
+    let idleTimer: Phaser.Time.TimerEvent | null = null;
+    const resetIdle = (): void => {
+      idleTimer?.remove(false);
+      idleTimer = this.time.delayedCall(ATTRACT_IDLE_MS, () => launchDemo(this));
+    };
     const onKey = (event: KeyboardEvent): void => {
+      resetIdle();
       if (event.repeat) return;
       const warp = advanceWarpCode(warpSequence, event.code);
       warpSequence = warp.sequence;
@@ -188,11 +209,18 @@ export class MenuScene extends Phaser.Scene {
       if (control === 'classic' || control === 'modern') this.startMode(control);
     };
     const stopTouch = subscribeControls(control => {
+      resetIdle();
       if (control === 'classic' || control === 'modern') this.startMode(control);
     });
     this.input.keyboard?.on('keydown', onKey);
+    this.input.on('pointermove', resetIdle);
+    this.input.on('pointerdown', resetIdle);
+    resetIdle();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown', onKey);
+      this.input.off('pointermove', resetIdle);
+      this.input.off('pointerdown', resetIdle);
+      idleTimer?.remove(false);
       stopTouch();
       stopMuteSubscription();
       stopFanfare();
@@ -241,11 +269,23 @@ export class BattleScene extends Phaser.Scene {
   private aircraftEnteredThisStep = false;
   private levelClearAudio: LevelClearAudio | null = null;
   private levelClearGeneration = 0;
+  private demo = false;
+  private demoController: DemoController | null = null;
+  private demoElapsedMs = 0;
+  private random: () => number = Math.random;
 
   constructor() { super('battle'); }
 
-  init(data: { mode?: GameMode; warp?: StagePosition }): void {
+  init(data: {
+    mode?: GameMode; warp?: StagePosition;
+    demo?: boolean; demoSeed?: number; demoStage?: StageNumber;
+  }): void {
     this.mode = data.mode === 'dynamic' ? 'dynamic' : 'classic';
+    this.demo = data.demo === true;
+    const seed = data.demoSeed ?? 0;
+    this.demoController = this.demo ? new DemoController(seed) : null;
+    this.demoElapsedMs = 0;
+    this.random = this.demo ? seededRandom(seed ^ 0x71c49bc5) : Math.random;
     this.startWarp = data.warp ?? null;
     this.warpSequence = '';
     this.entrySources = [];
@@ -255,7 +295,7 @@ export class BattleScene extends Phaser.Scene {
     this.levelClearAudio = null;
     this.levelClearGeneration = 0;
     this.cycle = 1;
-    this.stage = 1;
+    this.stage = this.demo && (data.demoStage === 2 || data.demoStage === 3) ? data.demoStage : 1;
     this.columns = 2;
     this.depth = 1;
     this.facing = 1;
@@ -274,14 +314,15 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     setPauseOpen(false);
-    setControlScreen('battle');
+    // Demo uses the real battle scene, but shows the mode controls on touchscreens.
+    setControlScreen(this.demo ? 'menu' : 'battle');
     updateSoundControls();
     if (!this.textures.exists('player')) installSprites(this);
     drawLandscape(this);
-    this.hud = new LcdHud(this, this.mode);
+    this.hud = new LcdHud(this, this.mode, this.demo);
     this.player = createEtchedImage(this, PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
-    this.gameOverHint = addLabel(this, 370, 509, 'ESC  PAUSE / MENU', 16).setDepth(30).setVisible(false);
+    this.gameOverHint = addLabel(this, 370, 509, 'ESC  MENU    DEMO FOLLOWS', 16).setDepth(30).setVisible(false);
     // Same short, melody-only MP3 approved in the level-clear listening preview.
     const levelClearElement = new Audio(new URL(LEVEL_CLEAR_AUDIO_URL, document.baseURI).href);
     levelClearElement.preload = 'auto';
@@ -297,11 +338,20 @@ export class BattleScene extends Phaser.Scene {
       this.showStageBanner();
       this.beginEntry();
     }
+    if (this.demo) {
+      this.time.delayedCall(DEMO_RUN_MS, () => {
+        if (this.demo) launchDemo(this);
+      });
+    }
 
     const onKey = (event: KeyboardEvent): void => {
       const control = keyToControl(event.code);
       if (control && ['left', 'right', 'up', 'down', 'missile'].includes(control)) {
         event.preventDefault();
+      }
+      if (this.demo) {
+        if (control) this.handleControl(control, event.repeat);
+        return;
       }
       if (control === 'menu' || control === 'sound') {
         this.handleControl(control, event.repeat);
@@ -336,7 +386,16 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private handleControl(control: GameControl, repeated = false): void {
+  private handleControl(control: GameControl, repeated = false, virtual = false): void {
+    if (this.demo && !virtual && control !== 'sound') {
+      if (repeated) return;
+      if (control === 'classic' || control === 'modern') {
+        this.scene.start('battle', { mode: control === 'classic' ? 'classic' : 'dynamic' });
+      } else if (control === 'menu') {
+        this.scene.start('menu');
+      }
+      return;
+    }
     if (control === 'sound') {
       if (!repeated) { soundBank.toggleMute(); updateSoundControls(); }
       return;
@@ -425,6 +484,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private playSfx(name: SoundId): void {
+    if (this.demo) return;
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     soundBank.play(audio.context, name);
   }
@@ -439,7 +499,7 @@ export class BattleScene extends Phaser.Scene {
   private playEntrySound(name: SoundId, generation: number): void {
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     const context = audio.context;
-    if (!context || soundBank.muted) return;
+    if (!context || soundBank.muted || this.demo) return;
     if (context.state === 'suspended') {
       // The initial menu selection is also a browser audio-unlock gesture.
       void context.resume().then(() => {
@@ -523,7 +583,7 @@ export class BattleScene extends Phaser.Scene {
     // Start after the killing shot's effect; never hold up stage progression.
     const generation = this.levelClearGeneration;
     this.time.delayedCall(LEVEL_CLEAR_DELAY_MS, () => {
-      if (this.state === 'playing' && generation === this.levelClearGeneration) {
+      if (!this.demo && this.state === 'playing' && generation === this.levelClearGeneration) {
         this.levelClearAudio?.play();
       }
     });
@@ -540,17 +600,17 @@ export class BattleScene extends Phaser.Scene {
   private spawnEnemy(kind: EnemyKind): void {
     const direction: -1 | 1 = kind === 'plane'
       ? chooseEntryDirection(
-          Math.random(), this.lastPlaneExit?.edge ?? null,
+          this.random(), this.lastPlaneExit?.edge ?? null,
           this.lastPlaneExit === null ? Infinity : this.elapsed * 1000 - this.lastPlaneExit.at,
         )
-      : Math.random() < 0.5 ? 1 : -1;
+      : this.random() < 0.5 ? 1 : -1;
     const isSub = kind === 'sub';
-    const airRow = Math.floor(Math.random() * CLASSIC_AIR_ROWS.length);
+    const airRow = Math.floor(this.random() * CLASSIC_AIR_ROWS.length);
     const gridColumn = direction === 1 ? 0 : CLASSIC_COLUMNS - 1;
     const gridRow = kind === 'plane' ? airRow :
-      kind === 'sweeper' ? CLASSIC_SURFACE_ROW : CLASSIC_SUB_ROWS[Math.random() < 0.5 ? 0 : 1];
+      kind === 'sweeper' ? CLASSIC_SURFACE_ROW : CLASSIC_SUB_ROWS[this.random() < 0.5 ? 0 : 1];
     const y = this.mode === 'classic' ? CLASSIC_ROW_Y[gridRow] :
-      kind === 'plane' ? Phaser.Utils.Array.GetRandom([105, 146, 186]) :
+      kind === 'plane' ? [105, 146, 186][Math.floor(this.random() * 3)] :
         kind === 'sweeper' ? SCREEN.waterline - 13 : CLASSIC_ROW_Y[gridRow];
     const x = this.mode === 'classic' ? PLAYER_COLUMNS[gridColumn] :
       isSub ? (direction === 1 ? 29 : SCREEN.width - 29) :
@@ -560,13 +620,13 @@ export class BattleScene extends Phaser.Scene {
       image: createEtchedImage(this, x, y, kind === 'sub' ? 'enemySub' : kind).setDepth(3),
       x, y, prevX: x, prevY: y, baseY: y, direction,
       speed: kind === 'plane' ? 94 : kind === 'sweeper' ? 39 : 41,
-      phase: Math.random() * Math.PI * 2,
-      nextShotAt: this.elapsed * 1000 + (kind === 'sub' ? 1400 : 800) + Math.random() * 1200,
+      phase: this.random() * Math.PI * 2,
+      nextShotAt: this.elapsed * 1000 + (kind === 'sub' ? 1400 : 800) + this.random() * 1200,
       shot: null, ticksAlive: 0, gridColumn, gridRow, shotsFired: 0,
       // Some Classic flights are reconnaissance and never release bombs.
-      reconnaissance: kind === 'plane' && this.mode === 'classic' && Math.random() < 0.30,
+      reconnaissance: kind === 'plane' && this.mode === 'classic' && this.random() < 0.30,
       activeBombs: 0,
-      subPattern: chooseSubPattern(Math.random()),
+      subPattern: chooseSubPattern(this.random()),
       spawnedAt: this.elapsed * 1000,
       initialGridRow: gridRow,
       lastVerticalMotion: 0,
@@ -579,7 +639,7 @@ export class BattleScene extends Phaser.Scene {
       // Arrival has priority if another plane changes attitude on the same tick.
       this.aircraftEnteredThisStep = true;
       const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
-      soundBank.startAircraft(audio.context, enemy);
+      if (!this.demo) soundBank.startAircraft(audio.context, enemy);
     }
   }
 
@@ -587,7 +647,7 @@ export class BattleScene extends Phaser.Scene {
     const next: AircraftVerticalMotion = verticalChange > 0 ? 1 : verticalChange < 0 ? -1 : 0;
     const cue = aircraftMotionCue(enemy.lastVerticalMotion, next);
     enemy.lastVerticalMotion = next;
-    if (!cue || this.aircraftEnteredThisStep) return;
+    if (!cue || this.aircraftEnteredThisStep || this.demo) return;
     const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
     if (cue === 'dive') soundBank.aircraftDive(audio.context, enemy);
     else soundBank.aircraftClimb(audio.context, enemy);
@@ -704,7 +764,7 @@ export class BattleScene extends Phaser.Scene {
     let fallingBomb: Shot | null = null;
     if (this.mode === 'classic') {
       const halfColumn = enemy.gridColumn * 2 +
-        (enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : 0) : Math.floor(Math.random() * 2));
+        (enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : 0) : Math.floor(this.random() * 2));
       const horizontal = enemy.kind === 'sub' ? (enemy.gridColumn === 0 ? 1 : -1) : 0;
       const vertical = enemy.kind === 'sub' ? 0 : 1;
       const shot = this.addClassicShot(kind, halfColumn, enemy.gridRow * 2 + 1,
@@ -716,8 +776,8 @@ export class BattleScene extends Phaser.Scene {
         shot.prevQuarterColumn = shot.quarterColumn;
         shot.x = classicQuarterColumnX(shot.quarterColumn);
         shot.image.setPosition(shot.x, shot.y);
-        shot.bombFlight = classicBombFlight(Math.random());
-        shot.driftDirection = Math.random() < 0.5 ? -1 : 1;
+        shot.bombFlight = classicBombFlight(this.random());
+        shot.driftDirection = this.random() < 0.5 ? -1 : 1;
         this.setBombAppearance(shot, shot.bombFlight, shot.driftDirection);
         fallingBomb = shot;
       }
@@ -736,7 +796,7 @@ export class BattleScene extends Phaser.Scene {
       } else {
         y += enemy.kind === 'plane' ? 13 : 16;
         vy = 109 * cycleScale;
-        vx = (Math.random() - 0.5) * 24;
+        vx = (this.random() - 0.5) * 24;
       }
       const shot = this.addShot(kind, x, y, vx, vy, enemy);
       this.setBombAppearance(shot, null, vx);
@@ -744,13 +804,13 @@ export class BattleScene extends Phaser.Scene {
     }
     if (fallingBomb) {
       const audio = this.sound as Phaser.Sound.WebAudioSoundManager;
-      soundBank.startBombFall(audio.context, fallingBomb);
+      if (!this.demo) soundBank.startBombFall(audio.context, fallingBomb);
     } else {
       this.playSfx('enemyWeaponDrop');
     }
     enemy.nextShotAt = this.mode === 'classic' && enemy.kind === 'plane'
-      ? this.elapsed * 1000 + (5 + Math.floor(Math.random() * 5)) * classicTickMs(this.cycle)
-      : this.elapsed * 1000 + 1500 + Math.random() * 2200;
+      ? this.elapsed * 1000 + (5 + Math.floor(this.random() * 5)) * classicTickMs(this.cycle)
+      : this.elapsed * 1000 + 1500 + this.random() * 2200;
   }
 
   private destroyShot(shot: Shot): void {
@@ -766,6 +826,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private awardPoints(points: number): void {
+    // Demo kills still satisfy stage objectives, but never score or award lives.
+    if (this.demo) return;
     const result = applyScore(this.score, this.playerLives, points, LIVES);
     const lifeAwarded = result.lives > this.playerLives;
     this.score = result.score;
@@ -791,8 +853,8 @@ export class BattleScene extends Phaser.Scene {
     if (enemy.kind === 'sub') {
       const scale = speedScale(this.cycle);
       this.nextEnemySub = this.elapsed * 1000 + (this.mode === 'classic'
-        ? 7000 + Math.random() * 1400
-        : (5500 + Math.random() * 1500) / scale);
+        ? 7000 + this.random() * 1400
+        : (5500 + this.random() * 1500) / scale);
     }
     if (destroyed) {
       this.playSfx('enemyDestroyed');
@@ -852,8 +914,12 @@ export class BattleScene extends Phaser.Scene {
         this.state = 'gameOver';
         this.playSfx('gameOver');
         this.tweens.pauseAll();
-        this.gameOverHint.setVisible(true);
+        this.gameOverHint.setVisible(!this.demo);
         this.drawHud();
+        // The tableau remains frozen until idle expiry; pause suspends this clock.
+        this.time.delayedCall(this.demo ? DEMO_GAME_OVER_MS : ATTRACT_IDLE_MS, () => {
+          if (this.state === 'gameOver' && !this.paused) launchDemo(this);
+        });
       });
     } else {
       this.time.delayedCall(PLAYER_DEATH_PAUSE_MS, () => {
@@ -908,7 +974,7 @@ export class BattleScene extends Phaser.Scene {
             CLASSIC_SURFACE_MOVE_TICKS : CLASSIC_ACTOR_MOVE_TICKS;
           if (enemy.ticksAlive % poseTicks === 0) {
             if (enemy.kind === 'plane') {
-              const delta = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
+              const delta = (Math.floor(this.random() * 3) - 1) as -1 | 0 | 1;
               const nextRow = classicPlaneRow(enemy.gridRow, delta);
               const actualVertical = nextRow - enemy.gridRow;
               this.planeChangedMotion(enemy, actualVertical);
@@ -991,7 +1057,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.mode === 'dynamic') {
         const recentlyRevealed = now - this.lastLaunchTime < 3300;
         const interest = Math.min(0.65, 0.15 + this.cycle * 0.065);
-        if (recentlyRevealed && Math.random() < interest && Math.abs(enemy.x - this.lastLaunchX) > 65) {
+        if (recentlyRevealed && this.random() < interest && Math.abs(enemy.x - this.lastLaunchX) > 65) {
           enemy.nextShotAt = now + 170;
           continue;
         }
@@ -1131,24 +1197,44 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private stepSimulation(movementSeconds: number, clockSeconds: number): void {
+    if (this.demoController) {
+      this.demoElapsedMs += clockSeconds * 1000;
+      const enemyView = this.enemies.map(enemy => ({
+        kind: enemy.kind, x: enemy.x, y: enemy.y,
+      }));
+      const shotView: DemoShot[] = this.shots
+        .filter(shot => shot.kind === 'bomb' || shot.kind === 'charge' || shot.kind === 'enemyTorpedo')
+        .map(shot => ({
+          kind: shot.kind as DemoShot['kind'], x: shot.x, y: shot.y,
+        }));
+      for (const action of this.demoController.decide({
+        mode: this.mode, stage: this.stage, column: this.columns,
+        depth: this.depth, facing: this.facing,
+        enemies: enemyView, shots: shotView,
+        missileReady: this.missile === null,
+        torpedoReady: this.torpedo === null,
+      }, this.demoElapsedMs)) {
+        this.handleControl(action, false, true);
+      }
+    }
     this.aircraftEnteredThisStep = false;
     this.elapsed += clockSeconds;
     const now = this.elapsed * 1000;
     const scale = speedScale(this.cycle);
     if (now >= this.nextPlane) {
       if (this.enemies.filter((e) => e.kind === 'plane').length < Math.min(4, 2 + this.cycle)) this.spawnEnemy('plane');
-      this.nextPlane = now + (2100 + Math.random() * 800) / scale;
+      this.nextPlane = now + (2100 + this.random() * 800) / scale;
     }
     if (this.stage >= 2 && now >= this.nextSweeper) {
       if (this.enemies.filter((e) => e.kind === 'sweeper').length < 2) this.spawnEnemy('sweeper');
-      this.nextSweeper = now + (4000 + Math.random() * 1500) / scale;
+      this.nextSweeper = now + (4000 + this.random() * 1500) / scale;
     }
     if (this.stage >= 3 && now >= this.nextEnemySub) {
       const subs = this.enemies.filter((e) => e.kind === 'sub').length;
       if (subs < 1) this.spawnEnemy('sub');
       this.nextEnemySub = now + (this.mode === 'classic'
-        ? 7000 + Math.random() * 1400
-        : (5500 + Math.random() * 1500) / scale);
+        ? 7000 + this.random() * 1400
+        : (5500 + this.random() * 1500) / scale);
     }
     this.updateEnemies(movementSeconds);
     this.updateShots(movementSeconds);
