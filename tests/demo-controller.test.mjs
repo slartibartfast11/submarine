@@ -56,7 +56,7 @@ test('virtual player has stable seeded decisions and a human-sized reaction dela
   const first = new DemoController(999);
   const second = new DemoController(999);
   const view = snapshot({
-    enemies: [{ kind: 'plane', x: 705, y: 165, vx: 200 }],
+    enemies: [{ kind: 'plane', x: 705, y: 165, vx: 200, gridColumn: 4, gridRow: 1 }],
     shots: [classicBomb({ quarterColumn: 9, halfColumn: 4, halfRow: 6 })],
   });
   for (let ms = 0; ms < 30_000; ms += 145) {
@@ -81,7 +81,7 @@ test('demo does not fire or wander aimlessly while the field is empty', () => {
 
 test('demo fires frequently once an actual target is in its lane', () => {
   const controller = new DemoController(420);
-  const view = snapshot({ enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0 }] });
+  const view = snapshot({ enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0, gridColumn: 2, gridRow: 1 }] });
   let launches = 0;
   for (let ms = 0; ms < 30_000; ms += 145) {
     if (controller.decide(view, ms).includes('missile')) launches++;
@@ -107,11 +107,69 @@ test('Classic straight and diagonal bombs threaten different predicted columns',
 test('Modern projectiles are checked at their projected row and column', () => {
   const view = snapshot({
     mode: 'dynamic', depth: 0,
-    shots: [classicBomb({ x: 555, y: 245, vx: -8, vy: 109 })],
+    shots: [classicBomb({ x: 555, y: 205, vx: -8, vy: 109 })],
   });
   assert.equal(incomingThreat(view, 3, 0), true);
   assert.equal(incomingThreat(view, 2, 0), false);
   assert.equal(incomingThreat(view, 3, 1), false);
+});
+
+test('Modern threat includes a projectile already overlapping its destination at t=0', () => {
+  const view = snapshot({
+    mode: 'dynamic', column: 1, depth: 0,
+    enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0, gridColumn: 2, gridRow: 1 }],
+    shots: [classicBomb({ x: 405, y: 360, vx: 0, vy: 109 })],
+  });
+  assert.equal(incomingThreat(view, 1, 0), false, 'staying put should be safe');
+  assert.equal(incomingThreat(view, 2, 0), true, 'destination is already occupied by bomb');
+  for (let seed = 0; seed <= 4; seed++) {
+    const actions = new DemoController(seed).decide(view, 0);
+    assert.ok(!actions.includes('right'), `seed ${seed} moved into the bomb at t=0`);
+  }
+});
+
+test('Modern threat prediction sweeps across gaps between frame samples', () => {
+  const view = snapshot({
+    mode: 'dynamic', depth: 0,
+    // Crosses x=405 in less than 120 ms, so neither endpoint of the old
+    // periodic sampler needed to be within the hit rectangle.
+    shots: [classicBomb({ x: 300, y: 345, vx: 3000, vy: 0 })],
+  });
+  assert.equal(incomingThreat(view, 2, 0), true);
+  assert.equal(incomingThreat(view, 0, 0), false);
+});
+
+test('escape does not choose a projectile-safe square occupied by an enemy sub', () => {
+  // Reproduces Codex's stage-three example: up is clear of the bomb but
+  // BattleScene would reject it because an enemy sub occupies that cell.
+  const view = snapshot({
+    mode: 'classic', stage: 3, column: 2, depth: 1,
+    enemies: [{ kind: 'sub', x: 405, y: 345, vx: 0, gridColumn: 2, gridRow: 4 }],
+    shots: [classicBomb({ halfRow: 9 })],
+  });
+  assert.equal(incomingThreat(view, 2, 1), true);
+  assert.equal(incomingThreat(view, 2, 0), false);
+  let horizontalEscapes = 0;
+  for (const seed of [0, 1, 3, 4]) {
+    const actions = new DemoController(seed).decide(view, 0);
+    assert.ok(!actions.includes('up'), `seed ${seed} tried a blocked escape`);
+    if (actions.includes('left') || actions.includes('right')) horizontalEscapes++;
+  }
+  assert.ok(horizontalEscapes >= 2, 'demo did not choose available horizontal escapes');
+});
+
+test('target-chasing cannot enter a submarine-occupied cell', () => {
+  // A normal aiming step must obey the same occupancy rule as escape moves.
+  const view = snapshot({
+    mode: 'classic', stage: 3, column: 1, depth: 1,
+    enemies: [
+      { kind: 'sub', x: 405, y: 421, vx: 0, gridColumn: 2, gridRow: 5 },
+    ],
+  });
+  for (let seed = 0; seed < 20; seed++) {
+    const actions = new DemoController(seed).decide(view, 0);
+    assert.ok(!actions.includes('right'), `seed ${seed} chased sub into occupied cell`);
+  }
 });
 
 test('safe position never moves into a predicted Classic projectile', () => {
@@ -119,7 +177,7 @@ test('safe position never moves into a predicted Classic projectile', () => {
     const controller = new DemoController(seed);
     const view = snapshot({
       column: 2, depth: 0,
-      enemies: [{ kind: 'plane', x: 855, y: 162, vx: 0 }],
+      enemies: [{ kind: 'plane', x: 855, y: 162, vx: 0, gridColumn: 5, gridRow: 1 }],
       shots: [classicBomb({ quarterColumn: 12, halfColumn: 6 })],
     });
     assert.equal(incomingThreat(view, 2, 0), false);
@@ -148,7 +206,7 @@ test('can escape an incoming shot using an adjacent safe square', () => {
 test('missiles still respect lockouts even with a visible target', () => {
   const controller = new DemoController(725);
   const view = snapshot({
-    enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0 }],
+    enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0, gridColumn: 2, gridRow: 1 }],
     missileReady: false,
   });
   for (let ms = 0; ms < 12_000; ms += 140) {
@@ -159,7 +217,7 @@ test('missiles still respect lockouts even with a visible target', () => {
 test('torpedoes cannot be requested before stage three, even with an enemy sub', () => {
   for (let stage of [1, 2]) {
     const controller = new DemoController(31337);
-    const view = snapshot({ stage, enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0 }] });
+    const view = snapshot({ stage, enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0, gridColumn: 4, gridRow: 5 }] });
     for (let ms = 0; ms < 40_000; ms += 750) {
       assert.ok(!controller.decide(view, ms).includes('torpedo'));
     }
@@ -170,7 +228,7 @@ test('demo can fire torpedoes against a visible stage-three sub', () => {
   const controller = new DemoController(31337);
   const view = snapshot({
     stage: 3,
-    enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0 }],
+    enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0, gridColumn: 4, gridRow: 5 }],
   });
   let fired = false;
   for (let ms = 0; ms < 40_000; ms += 750) {

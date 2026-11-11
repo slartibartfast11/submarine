@@ -1230,6 +1230,7 @@ export class BattleScene extends Phaser.Scene {
       this.demoElapsedMs += clockSeconds * 1000;
       const enemyView = this.enemies.map(enemy => ({
         kind: enemy.kind, x: enemy.x, y: enemy.y,
+        gridColumn: enemy.gridColumn, gridRow: enemy.gridRow,
         vx: enemy.kind === 'sub' ? 0 : enemy.direction *
           (this.mode === 'classic'
             ? CLASSIC_CELL_WIDTH / ((enemy.kind === 'plane'

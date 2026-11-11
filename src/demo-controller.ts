@@ -6,6 +6,7 @@ import {
   type ClassicBombFlight,
 } from './classic-grid.ts';
 import { CLASSIC_TORPEDO_MOVE_TICKS, classicTickMs } from './config.ts';
+import { submarineOccupiesCell } from './submarine-occupancy.ts';
 
 export const ATTRACT_IDLE_MS = 15_000;
 export const DEMO_RUN_MS = 60_000;
@@ -22,6 +23,7 @@ export type DemoAction = 'left' | 'right' | 'up' | 'down' | 'missile' | 'torpedo
 export type DemoEnemy = {
   kind: 'plane' | 'sweeper' | 'sub';
   x: number; y: number;
+  gridColumn: number; gridRow: number;
   // Approximate observed horizontal motion, for leading visible targets.
   vx: number;
 };
@@ -83,6 +85,38 @@ function inBounds(column: number): boolean {
   return column >= 0 && column < PLAYER_COLUMNS.length;
 }
 
+/** Exactly the same occupancy check that BattleScene applies to human input. */
+function occupiedBySub(snapshot: DemoSnapshot, column: number, depth: number): boolean {
+  return snapshot.enemies.some(enemy => enemy.kind === 'sub' &&
+    submarineOccupiesCell(snapshot.mode, enemy, column, depth));
+}
+
+/** Continuous segment against a stationary rectangle expanded by the shot size.
+ * Starts at t=0, avoiding gaps between sampled positions on fast frames.
+ */
+function sweptThreat(x: number, y: number, vx: number, vy: number,
+  durationSeconds: number, px: number, py: number, halfWidth: number, halfHeight: number,
+): boolean {
+  const bounds: Array<[number, number, number, number]> = [
+    [x, vx * durationSeconds, px - halfWidth, px + halfWidth],
+    [y, vy * durationSeconds, py - halfHeight, py + halfHeight],
+  ];
+  let enter = 0;
+  let exit = 1;
+  for (const [start, delta, min, max] of bounds) {
+    if (delta === 0) {
+      if (start < min || start > max) return false;
+      continue;
+    }
+    const t1 = (min - start) / delta;
+    const t2 = (max - start) / delta;
+    enter = Math.max(enter, Math.min(t1, t2));
+    exit = Math.min(exit, Math.max(t1, t2));
+    if (enter > exit) return false;
+  }
+  return true;
+}
+
 /**
  * Approximate whether an existing, visible projectile can reach a proposed
  * grid position. Classic uses the actual discrete flight pattern for bombs
@@ -97,12 +131,10 @@ export function incomingThreat(
   const py = PLAYER_DEPTHS[depth];
   for (const shot of snapshot.shots) {
     if (snapshot.mode === 'dynamic') {
-      for (let t = 0.12; t <= THREAT_HORIZON_MS / 1000; t += 0.12) {
-        const x = shot.x + shot.vx * t;
-        const y = shot.y + shot.vy * t;
-        if (Math.abs(x - px) <= PLAYER_HIT_HALF_WIDTH &&
-            Math.abs(y - py) <= PLAYER_HIT_HALF_HEIGHT) return true;
-      }
+      const halfWidth = shot.kind === 'enemyTorpedo' ? 51 : PLAYER_HIT_HALF_WIDTH;
+      const halfHeight = shot.kind === 'enemyTorpedo' ? 17 : PLAYER_HIT_HALF_HEIGHT;
+      if (sweptThreat(shot.x, shot.y, shot.vx, shot.vy,
+        THREAT_HORIZON_MS / 1000, px, py, halfWidth, halfHeight)) return true;
       continue;
     }
 
@@ -214,6 +246,7 @@ export class DemoController {
           { action: (snapshot.depth === 0 ? 'down' : 'up') as DemoAction,
             column: snapshot.column, depth: 1 - snapshot.depth },
         ].filter(option => inBounds(option.column) &&
+          !occupiedBySub(snapshot, option.column, option.depth) &&
           !incomingThreat(snapshot, option.column, option.depth));
         if (escapes.length > 0 && this.random() < 0.85) {
           // Prefer a useful direction if more than one escape is safe.
@@ -240,6 +273,7 @@ export class DemoController {
             depth: snapshot.depth };
         if ((depthChange || snapshot.column !== this.aimColumn) &&
             inBounds(nextStep.column) &&
+            !occupiedBySub(snapshot, nextStep.column, nextStep.depth) &&
             !incomingThreat(snapshot, nextStep.column, nextStep.depth) &&
             this.random() < 0.89) {
           actions.push(nextStep.action as DemoAction);
