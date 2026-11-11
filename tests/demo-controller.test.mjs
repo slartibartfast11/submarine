@@ -107,7 +107,7 @@ test('Classic straight and diagonal bombs threaten different predicted columns',
 test('Modern projectiles are checked at their projected row and column', () => {
   const view = snapshot({
     mode: 'dynamic', depth: 0,
-    shots: [classicBomb({ x: 555, y: 245, vx: -8, vy: 109 })],
+    shots: [classicBomb({ x: 555, y: 205, vx: -8, vy: 109 })],
   });
   assert.equal(incomingThreat(view, 3, 0), true);
   assert.equal(incomingThreat(view, 2, 0), false);
