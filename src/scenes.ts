@@ -3,11 +3,11 @@ import {
   CLASSIC_AIR_ROWS, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_BASE_TICK_MS, CLASSIC_CELL_WIDTH,
   CLASSIC_TORPEDO_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS, DYNAMIC_TORPEDO_SPEED,
   CLASSIC_ROW_Y, COLOURS, LIVES, PLAYER_COLUMNS, PLAYER_DEPTHS, SCREEN,
-  advanceWarpCode, canFire, chooseBest, classicPlaneRow, classicTickMs, speedScale,
+  advanceWarpCode, canFire, classicPlaneRow, classicTickMs, speedScale,
   planePoseForMotion,
   torpedoUnlocked,
   stageAfter, stageGoal, stageTarget,
-  type BestRun, type GameMode, type StageNumber, type StagePosition,
+  type GameMode, type StageNumber, type StagePosition,
 } from './config';
 import { installSprites, createEtchedImage } from './sprites';
 import {
@@ -19,6 +19,7 @@ import {
 } from './debris-timing';
 import { modernMissileInterceptsDrop, sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
+import { HighScores } from './high-scores';
 import { drawLcdBackdrop } from './lcd-background';
 import { safeSubSpawnRow, submarineOccupiesCell } from './submarine-occupancy';
 import { droppedBombAppearance } from './drop-appearance';
@@ -51,8 +52,7 @@ function updateSoundControls(): void {
   });
 }
 
-// Shared across runs within this browser page, but never persisted to storage.
-let sessionBest: BestRun = { score: 0, cycle: 1, stage: 1 };
+const highScores = new HighScores();
 
 type EnemyKind = 'plane' | 'sweeper' | 'sub';
 type ShotKind = 'missile' | 'torpedo' | 'bomb' | 'charge' | 'enemyTorpedo';
@@ -477,7 +477,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private drawHud(): void {
-    this.hud.render(this.cycle, this.stage, this.score, this.playerLives, sessionBest, this.state === 'gameOver');
+    this.hud.render(this.cycle, this.stage, this.score, this.playerLives, highScores.get(this.mode), this.state === 'gameOver');
   }
 
   private resetSpawns(): void {
@@ -862,7 +862,7 @@ export class BattleScene extends Phaser.Scene {
         if (this.state === 'playing') this.playSfx('extraLife');
       });
     }
-    sessionBest = chooseBest(sessionBest, { score: this.score, cycle: this.cycle, stage: this.stage });
+    highScores.record(this.mode, { score: this.score, cycle: this.cycle, stage: this.stage });
     this.drawHud();
   }
 
