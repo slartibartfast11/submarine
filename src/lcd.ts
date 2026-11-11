@@ -48,17 +48,28 @@ function lifeX(g: Phaser.GameObjects.Graphics, x: number, y: number, active: boo
 /** HUD labels, segmented values and lost-submarine indicators. */
 export class LcdHud {
   private readonly pixels: Phaser.GameObjects.Graphics;
-  private readonly gameOverField: Phaser.GameObjects.Text;
+  private readonly gameOverField: Phaser.GameObjects.Text | null;
+  private readonly demo: boolean;
   private lastState = '';
 
-  constructor(scene: Phaser.Scene, mode: GameMode) {
+  constructor(scene: Phaser.Scene, mode: GameMode, demo = false) {
+    this.demo = demo;
     const panel = scene.add.graphics().setDepth(20);
     panel.fillStyle(COLOURS.background).fillRect(0, 0, SCREEN.width, SCREEN.hudHeight);
     panel.lineStyle(2, COLOURS.dark, 0.75).lineBetween(0, SCREEN.hudHeight, SCREEN.width, SCREEN.hudHeight);
-    addLabel(scene, 116, 16, 'SCORE', 17, '#52634e').setDepth(22);
-    addLabel(scene, 18, 54, 'HI SCORE', 16, '#52634e').setDepth(22);
-    addLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69').setDepth(22);
-    this.gameOverField = addLabel(scene, 710, 14, 'GAME OVER', 25, '#acb9a8').setDepth(22);
+    if (demo) {
+      addLabel(scene, 20, 16, 'DEMO', 26).setDepth(22);
+      addLabel(scene, 237, 20, 'PRESS 1  CLASSIC', 20).setDepth(22);
+      addLabel(scene, 575, 20, 'PRESS 2  MODERN', 20).setDepth(22);
+      addLabel(scene, 22, 58, 'STAGE', 15, '#52634e').setDepth(22);
+      addLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69').setDepth(22);
+      this.gameOverField = null;
+    } else {
+      addLabel(scene, 116, 16, 'SCORE', 17, '#52634e').setDepth(22);
+      addLabel(scene, 18, 54, 'HI SCORE', 16, '#52634e').setDepth(22);
+      addLabel(scene, 804, 59, mode === 'dynamic' ? 'MODERN' : 'CLASSIC', 13, '#6b7d69').setDepth(22);
+      this.gameOverField = addLabel(scene, 710, 14, 'GAME OVER', 25, '#acb9a8').setDepth(22);
+    }
     this.pixels = scene.add.graphics().setDepth(21);
   }
 
@@ -67,13 +78,18 @@ export class LcdHud {
     if (state === this.lastState) return;
     this.lastState = state;
     this.pixels.clear();
+    if (this.demo) {
+      lcdString(this.pixels, `${cycle}-${stage}`, 106, 49, 0.65);
+      for (let i = 0; i < LIVES; i++) lifeX(this.pixels, 475 + 39 * i, 51, i < LIVES - lives);
+      return;
+    }
     lcdString(this.pixels, `${cycle}-${stage}`, 16, 12, 0.9);
     lcdString(this.pixels, String(score).padStart(5, '0'), 206, 12, 0.9);
     // Each lost submarine illuminates one of the three initially faint X marks.
     for (let i = 0; i < LIVES; i++) lifeX(this.pixels, 476 + 39 * i, 17, i < LIVES - lives);
     lcdString(this.pixels, `${best.cycle}-${best.stage}`, 166, 54, 0.64);
     lcdString(this.pixels, String(best.score).padStart(5, '0'), 259, 54, 0.64);
-    this.gameOverField.setColor(gameOver ? '#26372d' : '#acb9a8');
+    this.gameOverField?.setColor(gameOver ? '#26372d' : '#acb9a8');
   }
 }
 
