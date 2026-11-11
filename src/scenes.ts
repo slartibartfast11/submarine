@@ -20,6 +20,7 @@ import {
 import { modernMissileInterceptsDrop, sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
+import { safeSubSpawnRow, submarineOccupiesCell } from './submarine-occupancy';
 import { droppedBombAppearance } from './drop-appearance';
 import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
@@ -79,6 +80,8 @@ type Enemy = {
   spawnedAt: number;
   initialGridRow: number;
   lastVerticalMotion: AircraftVerticalMotion;
+  pendingDepthChange: boolean;
+  subDepthHoldMs: number;
 };
 
 type Shot = {
@@ -384,6 +387,11 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  private subBlocksPlayerCell(column: number, depth: number): boolean {
+    return this.enemies.some(enemy => enemy.kind === 'sub' &&
+      submarineOccupiesCell(this.mode, enemy, column, depth));
+  }
+
   private handleControl(control: GameControl, repeated = false, virtual = false): void {
     if (this.demo && !virtual && control !== 'sound') {
       if (repeated) return;
@@ -408,15 +416,17 @@ export class BattleScene extends Phaser.Scene {
     if (control === 'quit') { if (this.paused) this.returnToMenu(); return; }
     if (this.paused || this.state !== 'playing') return;
     if (control === 'left') {
-      this.columns = Math.max(0, this.columns - 1);
-      this.facing = -1;
+      const next = Math.max(0, this.columns - 1);
+      if (!this.subBlocksPlayerCell(next, this.depth)) this.columns = next;
+      this.facing = -1; // Turning in place is still possible against a blocked cell.
     } else if (control === 'right') {
-      this.columns = Math.min(PLAYER_COLUMNS.length - 1, this.columns + 1);
+      const next = Math.min(PLAYER_COLUMNS.length - 1, this.columns + 1);
+      if (!this.subBlocksPlayerCell(next, this.depth)) this.columns = next;
       this.facing = 1;
     } else if (control === 'up') {
-      this.depth = 0;
+      if (!this.subBlocksPlayerCell(this.columns, 0)) this.depth = 0;
     } else if (control === 'down') {
-      this.depth = 1;
+      if (!this.subBlocksPlayerCell(this.columns, 1)) this.depth = 1;
     } else if (control === 'missile' && !repeated) {
       this.firePlayerMissile();
     } else if (control === 'torpedo' && !repeated) {
@@ -605,8 +615,11 @@ export class BattleScene extends Phaser.Scene {
     const isSub = kind === 'sub';
     const airRow = Math.floor(this.random() * CLASSIC_AIR_ROWS.length);
     const gridColumn = direction === 1 ? 0 : CLASSIC_COLUMNS - 1;
-    const gridRow = kind === 'plane' ? airRow :
+    const proposedRow = kind === 'plane' ? airRow :
       kind === 'sweeper' ? CLASSIC_SURFACE_ROW : CLASSIC_SUB_ROWS[this.random() < 0.5 ? 0 : 1];
+    const gridRow = isSub
+      ? safeSubSpawnRow(proposedRow, gridColumn, this.columns, this.depth)
+      : proposedRow;
     const y = this.mode === 'classic' ? CLASSIC_ROW_Y[gridRow] :
       kind === 'plane' ? [105, 146, 186][Math.floor(this.random() * 3)] :
         kind === 'sweeper' ? SCREEN.waterline - 13 : CLASSIC_ROW_Y[gridRow];
@@ -628,6 +641,8 @@ export class BattleScene extends Phaser.Scene {
       spawnedAt: this.elapsed * 1000,
       initialGridRow: gridRow,
       lastVerticalMotion: 0,
+      pendingDepthChange: false,
+      subDepthHoldMs: 0,
     };
     enemy.image.setFlipX(direction === -1);
     this.enemies.push(enemy);
@@ -1000,10 +1015,18 @@ export class BattleScene extends Phaser.Scene {
             this.removeEnemy(enemy, false);
             continue;
           }
-          if (action === 'change-depth') {
-            enemy.gridRow = enemy.gridRow === CLASSIC_SUB_ROWS[0] ?
+          if (action === 'change-depth') enemy.pendingDepthChange = true;
+          if (enemy.pendingDepthChange) {
+            const nextRow = enemy.gridRow === CLASSIC_SUB_ROWS[0] ?
               CLASSIC_SUB_ROWS[1] : CLASSIC_SUB_ROWS[0];
-            enemy.y = CLASSIC_ROW_Y[enemy.gridRow];
+            // Retry on later ticks if the player currently occupies the destination.
+            if (!submarineOccupiesCell('classic',
+              { ...enemy, gridRow: nextRow, y: CLASSIC_ROW_Y[nextRow] },
+              this.columns, this.depth)) {
+              enemy.gridRow = nextRow;
+              enemy.y = CLASSIC_ROW_Y[nextRow];
+              enemy.pendingDepthChange = false;
+            }
           }
           if (action === 'fire') this.fireEnemy(enemy);
         }
@@ -1036,13 +1059,21 @@ export class BattleScene extends Phaser.Scene {
             this.removeEnemy(enemy, false);
             continue;
           }
-          const progress = dynamicSubDepthProgress(age, enemy.subPattern);
+          const progress = dynamicSubDepthProgress(age - enemy.subDepthHoldMs, enemy.subPattern);
           const from = CLASSIC_ROW_Y[enemy.initialGridRow];
           const toRow = enemy.initialGridRow === CLASSIC_SUB_ROWS[0] ?
             CLASSIC_SUB_ROWS[1] : CLASSIC_SUB_ROWS[0];
           const eased = progress * progress * (3 - 2 * progress);
-          enemy.y = from + (CLASSIC_ROW_Y[toRow] - from) * eased;
-          if (progress >= 1) enemy.gridRow = toRow;
+          const proposedY = from + (CLASSIC_ROW_Y[toRow] - from) * eased;
+          // Pause only the depth transition when it would enter the player's lane.
+          // Retain its last position, then continue smoothly once the lane is free.
+          if (submarineOccupiesCell('dynamic',
+            { ...enemy, y: proposedY }, this.columns, this.depth)) {
+            enemy.subDepthHoldMs += dt * 1000;
+          } else {
+            enemy.y = proposedY;
+            if (progress >= 1) enemy.gridRow = toRow;
+          }
           enemy.image.setPosition(enemy.x, enemy.y).setFlipX(enemy.direction === -1);
           if (action === 'fire') this.fireEnemy(enemy);
           continue;

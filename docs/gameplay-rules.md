@@ -14,7 +14,7 @@
 
 On touchscreens, use the on-screen direction pad, **MISSILE** and **TORPEDO** buttons. The separate **PAUSE / MENU** button freezes the game and offers **Continue**, **Sound On / Off** or **Main Menu**. Choose **Classic** or **Modern** with a tap on the title screen. Hold left or right to move across multiple positions. Landscape orientation provides a larger display.
 
-Your submarine moves between **six positions** across the screen and **two depths** underwater.
+Your submarine moves between **six positions** across the screen and **two depths** underwater. You can approach an enemy submarine, but you cannot move into its position at the same depth; change depth to move past it.
 
 ## Weapons and enemies
 
