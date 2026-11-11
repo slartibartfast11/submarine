@@ -1230,14 +1230,25 @@ export class BattleScene extends Phaser.Scene {
       this.demoElapsedMs += clockSeconds * 1000;
       const enemyView = this.enemies.map(enemy => ({
         kind: enemy.kind, x: enemy.x, y: enemy.y,
+        vx: enemy.kind === 'sub' ? 0 : enemy.direction *
+          (this.mode === 'classic'
+            ? CLASSIC_CELL_WIDTH / ((enemy.kind === 'plane'
+              ? CLASSIC_ACTOR_MOVE_TICKS : CLASSIC_SURFACE_MOVE_TICKS) *
+              classicTickMs(this.cycle) / 1000)
+            : enemy.speed * speedScale(this.cycle)),
       }));
       const shotView: DemoShot[] = this.shots
         .filter(shot => shot.kind === 'bomb' || shot.kind === 'charge' || shot.kind === 'enemyTorpedo')
         .map(shot => ({
           kind: shot.kind as DemoShot['kind'], x: shot.x, y: shot.y,
+          vx: shot.vx, vy: shot.vy,
+          halfColumn: shot.halfColumn, quarterColumn: shot.quarterColumn,
+          halfRow: shot.halfRow, stepColumn: shot.stepColumn, stepRow: shot.stepRow,
+          ticksInFlight: shot.ticksInFlight, bombFlight: shot.bombFlight,
+          driftDirection: shot.driftDirection,
         }));
       for (const action of this.demoController.decide({
-        mode: this.mode, stage: this.stage, column: this.columns,
+        mode: this.mode, cycle: this.cycle, stage: this.stage, column: this.columns,
         depth: this.depth, facing: this.facing,
         enemies: enemyView, shots: shotView,
         missileReady: this.missile === null,

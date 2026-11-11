@@ -2,13 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ATTRACT_IDLE_MS, DEMO_GAME_OVER_MS, DEMO_RUN_MS,
-  DemoController, demoSelection, parseDemoSeed, seededRandom,
+  DemoController, demoSelection, incomingThreat, parseDemoSeed, seededRandom,
 } from '../src/demo-controller.ts';
 
 function snapshot(overrides = {}) {
   return {
-    mode: 'classic', stage: 1, column: 2, depth: 1, facing: 1,
+    mode: 'classic', cycle: 1, stage: 1, column: 2, depth: 1, facing: 1,
     enemies: [], shots: [], missileReady: true, torpedoReady: true,
+    ...overrides,
+  };
+} 
+
+function classicBomb(overrides = {}) {
+  return {
+    kind: 'bomb', x: 405, y: 300, vx: 0, vy: 0,
+    halfColumn: 5, quarterColumn: 11, halfRow: 7,
+    stepColumn: 0, stepRow: 1,
+    ticksInFlight: 0, bombFlight: 'straight', driftDirection: 1,
     ...overrides,
   };
 }
@@ -46,8 +56,8 @@ test('virtual player has stable seeded decisions and a human-sized reaction dela
   const first = new DemoController(999);
   const second = new DemoController(999);
   const view = snapshot({
-    enemies: [{ kind: 'plane', x: 705, y: 165 }],
-    shots: [{ kind: 'bomb', x: 405, y: 280 }],
+    enemies: [{ kind: 'plane', x: 705, y: 165, vx: 200 }],
+    shots: [classicBomb({ quarterColumn: 9, halfColumn: 4, halfRow: 6 })],
   });
   for (let ms = 0; ms < 30_000; ms += 145) {
     const a = first.decide(view, ms);
@@ -60,35 +70,96 @@ test('virtual player has stable seeded decisions and a human-sized reaction dela
   }
 });
 
-test('demo repeatedly fires a ready missile even with no visible targets', () => {
+test('demo does not fire or wander aimlessly while the field is empty', () => {
   const controller = new DemoController(420);
   const view = snapshot();
+  for (let ms = 0; ms < 12_000; ms += 145) {
+    const actions = controller.decide(view, ms);
+    assert.deepEqual(actions, [], 'unexpected empty-field activity at ' + ms + ' ms');
+  }
+});
+
+test('demo fires frequently once an actual target is in its lane', () => {
+  const controller = new DemoController(420);
+  const view = snapshot({ enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0 }] });
   let launches = 0;
   for (let ms = 0; ms < 30_000; ms += 145) {
     if (controller.decide(view, ms).includes('missile')) launches++;
   }
-  // Firing is a separate, quick decision; aim and enemy alignment cannot
-  // reduce it to the occasional shot seen in the first attract-mode build.
-  assert.ok(launches >= 70, `only ${launches} ready-weapon launches in 30 seconds`);
+  assert.ok(launches >= 55, 'only ' + launches + ' aimed launches in 30 seconds');
 });
 
-test('nearby bombs do not suppress ready missile fire or override lockouts', () => {
-  const controller = new DemoController(725);
-  const dangerous = snapshot({
-    shots: [{ kind: 'bomb', x: 405, y: 355 }],
+test('Classic straight and diagonal bombs threaten different predicted columns', () => {
+  const view = snapshot({
+    depth: 0,
+    shots: [classicBomb({ quarterColumn: 11, halfColumn: 5,
+      bombFlight: 'steep', driftDirection: 1 })],
   });
-  for (let ms = 0; ms < 12_000; ms += 600) {
-    assert.ok(controller.decide(dangerous, ms).includes('missile'),
-      `ready missile not fired with bomb present at ${ms} ms`);
-    assert.ok(!controller.decide({ ...dangerous, missileReady: false }, ms + 100)
-      .includes('missile'));
+  // At the next Classic half-row it drifts across from column 2 into 3.
+  assert.equal(incomingThreat(view, 2, 0), false);
+  assert.equal(incomingThreat(view, 3, 0), true);
+  // A straight bomb stays in column 2 rather than jumping right.
+  const straight = snapshot({ depth: 0, shots: [classicBomb()] });
+  assert.equal(incomingThreat(straight, 2, 0), true);
+  assert.equal(incomingThreat(straight, 3, 0), false);
+});
+
+test('Modern projectiles are checked at their projected row and column', () => {
+  const view = snapshot({
+    mode: 'dynamic', depth: 0,
+    shots: [classicBomb({ x: 555, y: 245, vx: -8, vy: 109 })],
+  });
+  assert.equal(incomingThreat(view, 3, 0), true);
+  assert.equal(incomingThreat(view, 2, 0), false);
+  assert.equal(incomingThreat(view, 3, 1), false);
+});
+
+test('safe position never moves into a predicted Classic projectile', () => {
+  for (let seed = 0; seed < 50; seed++) {
+    const controller = new DemoController(seed);
+    const view = snapshot({
+      column: 2, depth: 0,
+      enemies: [{ kind: 'plane', x: 855, y: 162, vx: 0 }],
+      shots: [classicBomb({ quarterColumn: 12, halfColumn: 6 })],
+    });
+    assert.equal(incomingThreat(view, 2, 0), false);
+    assert.equal(incomingThreat(view, 3, 0), true);
+    assert.ok(!controller.decide(view, 0).includes('right'),
+      'seed ' + seed + ' moved into a predicted strike');
+  }
+});
+
+test('can escape an incoming shot using an adjacent safe square', () => {
+  let evasions = 0;
+  for (let seed = 0; seed < 40; seed++) {
+    const controller = new DemoController(seed);
+    const view = snapshot({
+      column: 2, depth: 0,
+      shots: [classicBomb()],
+    });
+    const actions = controller.decide(view, 0);
+    if (actions.includes('left') || actions.includes('right') || actions.includes('down')) {
+      evasions++;
+    }
+  }
+  assert.ok(evasions >= 25, 'insufficient deliberate evasions: ' + evasions);
+});
+
+test('missiles still respect lockouts even with a visible target', () => {
+  const controller = new DemoController(725);
+  const view = snapshot({
+    enemies: [{ kind: 'plane', x: 405, y: 162, vx: 0 }],
+    missileReady: false,
+  });
+  for (let ms = 0; ms < 12_000; ms += 140) {
+    assert.ok(!controller.decide(view, ms).includes('missile'));
   }
 });
 
 test('torpedoes cannot be requested before stage three, even with an enemy sub', () => {
   for (let stage of [1, 2]) {
     const controller = new DemoController(31337);
-    const view = snapshot({ stage, enemies: [{ kind: 'sub', x: 705, y: 421 }] });
+    const view = snapshot({ stage, enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0 }] });
     for (let ms = 0; ms < 40_000; ms += 750) {
       assert.ok(!controller.decide(view, ms).includes('torpedo'));
     }
@@ -99,7 +170,7 @@ test('demo can fire torpedoes against a visible stage-three sub', () => {
   const controller = new DemoController(31337);
   const view = snapshot({
     stage: 3,
-    enemies: [{ kind: 'sub', x: 705, y: 421 }],
+    enemies: [{ kind: 'sub', x: 705, y: 421, vx: 0 }],
   });
   let fired = false;
   for (let ms = 0; ms < 40_000; ms += 750) {
