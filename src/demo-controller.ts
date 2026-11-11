@@ -4,6 +4,13 @@ export const ATTRACT_IDLE_MS = 15_000;
 export const DEMO_RUN_MS = 60_000;
 export const DEMO_GAME_OVER_MS = 2_800;
 
+/** Only unsigned 32-bit decimal seeds are accepted in the demo URL. */
+export function parseDemoSeed(value: string | null): number | null {
+  if (value === null || !/^\d+$/.test(value)) return null;
+  const seed = Number(value);
+  return Number.isSafeInteger(seed) && seed <= 0xffffffff ? seed : null;
+}
+
 export type DemoAction = 'left' | 'right' | 'up' | 'down' | 'missile' | 'torpedo';
 export type DemoEnemy = { kind: 'plane' | 'sweeper' | 'sub'; x: number; y: number };
 export type DemoShot = { kind: 'bomb' | 'charge' | 'enemyTorpedo'; x: number; y: number };

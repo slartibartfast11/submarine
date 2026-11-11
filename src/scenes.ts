@@ -12,7 +12,7 @@ import {
 import { installSprites, createEtchedImage } from './sprites';
 import {
   ATTRACT_IDLE_MS, DEMO_RUN_MS, DEMO_GAME_OVER_MS,
-  DemoController, demoSelection, seededRandom, type DemoShot,
+  DemoController, demoSelection, parseDemoSeed, seededRandom, type DemoShot,
 } from './demo-controller';
 import {
   DEBRIS_HOLD_MS, DEBRIS_FADE_MS, PLAYER_DEBRIS_MULTIPLIER, PLAYER_DEATH_PAUSE_MS,
@@ -110,10 +110,8 @@ function drawLandscape(scene: Phaser.Scene): void {
 
 /** Any demo can be reproduced locally with ?demoSeed=<unsigned integer>. */
 function launchDemo(scene: Phaser.Scene): void {
-  const rawSeed = new URLSearchParams(window.location.search).get('demoSeed');
-  const suppliedSeed = rawSeed !== null && /^\\d+$/.test(rawSeed) ? Number(rawSeed) : NaN;
-  const seed = Number.isSafeInteger(suppliedSeed) && suppliedSeed >= 0 && suppliedSeed <= 0xffffffff
-    ? suppliedSeed : Math.floor(Math.random() * 0x100000000);
+  const suppliedSeed = parseDemoSeed(new URLSearchParams(window.location.search).get('demoSeed'));
+  const seed = suppliedSeed ?? Math.floor(Math.random() * 0x100000000);
   const selection = demoSelection(seed);
   console.info(`[Submarine demo] seed=${seed} mode=${selection.mode} stage=1-${selection.stage}; repeat with ?demoSeed=${seed}`);
   scene.scene.start('battle', { ...selection, demoStage: selection.stage, demo: true, demoSeed: seed });

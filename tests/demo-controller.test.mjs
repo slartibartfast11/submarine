@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ATTRACT_IDLE_MS, DEMO_GAME_OVER_MS, DEMO_RUN_MS,
-  DemoController, demoSelection, seededRandom,
+  DemoController, demoSelection, parseDemoSeed, seededRandom,
 } from '../src/demo-controller.ts';
 
 function snapshot(overrides = {}) {
@@ -92,5 +92,15 @@ test('demo never requests a movement beyond the six-position horizontal grid', (
       if (column === 0) assert.ok(!actions.includes('left'));
       if (column === 5) assert.ok(!actions.includes('right'));
     }
+  }
+});
+
+
+test('URL demoSeed accepts decimal seeds and rejects invalid input', () => {
+  assert.equal(parseDemoSeed('12345'), 12345);
+  assert.equal(parseDemoSeed('0'), 0);
+  assert.equal(parseDemoSeed('4294967295'), 4294967295);
+  for (const value of [null, '', '-1', '12.5', '0x10', 'hello', '4294967296']) {
+    assert.equal(parseDemoSeed(value), null);
   }
 });
