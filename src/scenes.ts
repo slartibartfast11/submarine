@@ -21,6 +21,7 @@ import { applyScore, INTERCEPT_POINTS } from './scoring';
 import { chooseEntryDirection, exitEdge, type ScreenEdge } from './spawn-continuity';
 import { addLabel } from './labels';
 import { soundBank } from './sound-bank';
+import { LEVEL_CLEAR_AUDIO_URL, LEVEL_CLEAR_DELAY_MS, LevelClearAudio } from './level-clear-audio';
 import { aircraftMotionCue, type AircraftVerticalMotion } from './aircraft-audio';
 import { ENTRY_SEQUENCE, ENTRY_COMPLETE_MS } from './entry-cues';
 import type { SoundId } from './sfx-presets';
@@ -238,6 +239,8 @@ export class BattleScene extends Phaser.Scene {
   private paused = false;
   private entryGeneration = 0;
   private aircraftEnteredThisStep = false;
+  private levelClearAudio: LevelClearAudio | null = null;
+  private levelClearGeneration = 0;
 
   constructor() { super('battle'); }
 
@@ -249,6 +252,8 @@ export class BattleScene extends Phaser.Scene {
     this.paused = false;
     this.entryGeneration = 0;
     this.aircraftEnteredThisStep = false;
+    this.levelClearAudio = null;
+    this.levelClearGeneration = 0;
     this.cycle = 1;
     this.stage = 1;
     this.columns = 2;
@@ -277,6 +282,14 @@ export class BattleScene extends Phaser.Scene {
     this.player = createEtchedImage(this, PLAYER_COLUMNS[4], PLAYER_DEPTHS[1], 'player').setDepth(5);
     this.banner = addLabel(this, 230, 235, '', 25).setDepth(30);
     this.gameOverHint = addLabel(this, 370, 509, 'ESC  PAUSE / MENU', 16).setDepth(30).setVisible(false);
+    // Same short, melody-only MP3 approved in the level-clear listening preview.
+    const levelClearElement = new Audio(new URL(LEVEL_CLEAR_AUDIO_URL, document.baseURI).href);
+    levelClearElement.preload = 'auto';
+    levelClearElement.volume = 0.35;
+    const levelClearAudio = new LevelClearAudio(levelClearElement);
+    this.levelClearAudio = levelClearAudio;
+    levelClearAudio.setMuted(soundBank.muted);
+    const unsubscribeMute = soundBank.subscribeMute(muted => levelClearAudio.setMuted(muted));
     this.drawHud();
     if (this.startWarp) {
       this.warpTo(this.startWarp);
@@ -309,6 +322,11 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.paused = false;
+      ++this.levelClearGeneration;
+      levelClearAudio.stop();
+      unsubscribeMute();
+      levelClearElement.removeAttribute('src');
+      this.levelClearAudio = null;
       soundBank.stopBombFall();
       soundBank.stopAircraft();
       setPauseOpen(false);
@@ -356,6 +374,7 @@ export class BattleScene extends Phaser.Scene {
   private pauseGame(): void {
     if (this.paused) return;
     this.paused = true;
+    this.levelClearAudio?.pause();
     soundBank.stopBombFall();
     soundBank.stopAircraft();
     // Pause the scene clock and tweens, including delayed entry and death callbacks.
@@ -368,6 +387,7 @@ export class BattleScene extends Phaser.Scene {
     this.paused = false;
     setPauseOpen(false);
     this.scene.resume();
+    this.levelClearAudio?.resume();
   }
 
   private returnToMenu(): void {
@@ -393,6 +413,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private clearBattlefield(): void {
+    ++this.levelClearGeneration;
+    this.levelClearAudio?.stop();
     soundBank.stopAircraft();
     for (const shot of [...this.shots]) this.destroyShot(shot);
     for (const enemy of [...this.enemies]) this.removeEnemy(enemy, false);
@@ -498,6 +520,13 @@ export class BattleScene extends Phaser.Scene {
     this.resetSpawns();
     this.drawHud();
     this.showStageBanner();
+    // Start after the killing shot's effect; never hold up stage progression.
+    const generation = this.levelClearGeneration;
+    this.time.delayedCall(LEVEL_CLEAR_DELAY_MS, () => {
+      if (this.state === 'playing' && generation === this.levelClearGeneration) {
+        this.levelClearAudio?.play();
+      }
+    });
   }
 
   private showStageBanner(): void {
@@ -804,6 +833,8 @@ export class BattleScene extends Phaser.Scene {
   private hitPlayer(): void {
     if (this.state !== 'playing') return;
     this.state = 'exploding';
+    ++this.levelClearGeneration;
+    this.levelClearAudio?.stop();
     soundBank.stopBombFall();
     soundBank.stopAircraft();
     this.tweens.killTweensOf(this.banner);
