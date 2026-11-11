@@ -60,6 +60,31 @@ test('virtual player has stable seeded decisions and a human-sized reaction dela
   }
 });
 
+test('demo repeatedly fires a ready missile even with no visible targets', () => {
+  const controller = new DemoController(420);
+  const view = snapshot();
+  let launches = 0;
+  for (let ms = 0; ms < 30_000; ms += 145) {
+    if (controller.decide(view, ms).includes('missile')) launches++;
+  }
+  // Firing is a separate, quick decision; aim and enemy alignment cannot
+  // reduce it to the occasional shot seen in the first attract-mode build.
+  assert.ok(launches >= 70, `only ${launches} ready-weapon launches in 30 seconds`);
+});
+
+test('nearby bombs do not suppress ready missile fire or override lockouts', () => {
+  const controller = new DemoController(725);
+  const dangerous = snapshot({
+    shots: [{ kind: 'bomb', x: 405, y: 355 }],
+  });
+  for (let ms = 0; ms < 12_000; ms += 600) {
+    assert.ok(controller.decide(dangerous, ms).includes('missile'),
+      `ready missile not fired with bomb present at ${ms} ms`);
+    assert.ok(!controller.decide({ ...dangerous, missileReady: false }, ms + 100)
+      .includes('missile'));
+  }
+});
+
 test('torpedoes cannot be requested before stage three, even with an enemy sub', () => {
   for (let stage of [1, 2]) {
     const controller = new DemoController(31337);
