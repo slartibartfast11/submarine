@@ -1,14 +1,31 @@
-import { ENTRY_STEP_MS } from './config.ts';
+import { SFX_PRESETS } from './sfx-presets.ts';
 
-// Movement falls on the BOO beats of the approved Take 6 preview.
-// Notes are triggered by the scene clock so pausing also pauses the sequence.
-export const ENTRY_MOVE_OFFSET_MS = 1170;
-export const ENTRY_COMPLETE_MS = ENTRY_STEP_MS * 3;
+// All six pings use precisely the same sound. Rests are measured from the end
+// of one ping to the start of the next; the gaps shrink within each group.
+// The first ping of each 1 / 2 / 3 group moves the player submarine.
+const ping = SFX_PRESETS.entryPing;
+export const ENTRY_PING_DURATION_MS = Math.round(
+  (ping.attack + ping.sustain + ping.decay) * 1000,
+);
+export const ENTRY_FULL_REST_MS = 750;
+export const ENTRY_HALF_REST_MS = 375;
+export const ENTRY_QUARTER_REST_MS = 188;
 
+const firstPairAt = ENTRY_PING_DURATION_MS + ENTRY_FULL_REST_MS;
+const secondPairAt = firstPairAt + ENTRY_PING_DURATION_MS + ENTRY_HALF_REST_MS;
+const firstTripleAt = secondPairAt + ENTRY_PING_DURATION_MS + ENTRY_FULL_REST_MS;
+const secondTripleAt = firstTripleAt + ENTRY_PING_DURATION_MS + ENTRY_QUARTER_REST_MS;
+const thirdTripleAt = secondTripleAt + ENTRY_PING_DURATION_MS + ENTRY_QUARTER_REST_MS;
+
+// Timers follow the scene clock, so a paused entry pauses movement and sound.
 export const ENTRY_SEQUENCE = [
-  { atMs: 0, sound: 'entryBaaaa', column: 4 },
-  { atMs: ENTRY_MOVE_OFFSET_MS, sound: 'entryBoo', column: 3 },
-  { atMs: ENTRY_STEP_MS, sound: 'entryBaaaa', column: 3 },
-  { atMs: ENTRY_STEP_MS + ENTRY_MOVE_OFFSET_MS, sound: 'entryBooSecond', column: 2 },
-  { atMs: ENTRY_STEP_MS * 2, sound: 'entryFinal', column: 2 },
+  { atMs: 0, sound: 'entryPing', column: 4 },
+  { atMs: firstPairAt, sound: 'entryPing', column: 3 },
+  { atMs: secondPairAt, sound: 'entryPing', column: 3 },
+  { atMs: firstTripleAt, sound: 'entryPing', column: 2 },
+  { atMs: secondTripleAt, sound: 'entryPing', column: 2 },
+  { atMs: thirdTripleAt, sound: 'entryPing', column: 2 },
 ] as const;
+
+// Unlock controls exactly as the last 416 ms ping fades out.
+export const ENTRY_COMPLETE_MS = thirdTripleAt + ENTRY_PING_DURATION_MS;
