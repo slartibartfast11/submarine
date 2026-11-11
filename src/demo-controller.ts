@@ -209,9 +209,9 @@ export class DemoController {
         // Avoid imminent shots, choosing only a safer *adjacent* grid square.
         // No teleporting, impossible movement, or omniscient escape route.
         const escapes: Array<{ action: DemoAction; column: number; depth: number }> = [
-          { action: 'left', column: snapshot.column - 1, depth: snapshot.depth },
-          { action: 'right', column: snapshot.column + 1, depth: snapshot.depth },
-          { action: snapshot.depth === 0 ? 'down' : 'up',
+          { action: 'left' as const, column: snapshot.column - 1, depth: snapshot.depth },
+          { action: 'right' as const, column: snapshot.column + 1, depth: snapshot.depth },
+          { action: (snapshot.depth === 0 ? 'down' : 'up') as DemoAction,
             column: snapshot.column, depth: 1 - snapshot.depth },
         ].filter(option => inBounds(option.column) &&
           !incomingThreat(snapshot, option.column, option.depth));
