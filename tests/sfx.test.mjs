@@ -36,26 +36,26 @@ test('quiet sonar entry uses one preset and accelerates in 1, 2, 3 groups', () =
   const ping = SFX_PRESETS.entryPing;
   assert.deepEqual(ping, {"wave":2,"freq":880,"slide":-0.1,"dslide":0,"minFreq":20,"vibDepth":0,"vibRate":6,"arpMult":1,"arpTime":0.1,"duty":0.5,"dutySweep":0,"attack":0.006,"sustain":0.01,"punch":0,"decay":0.4,"repeat":0,"lpf":1600,"lpfSweep":0,"lpfRes":0,"hpf":0,"hpfSweep":0,"phaserMs":0,"phaserSweep":0,"crushBits":0,"crushHold":1,"gain":0.5,"seed":7095});
   assert.equal(ENTRY_PING_DURATION_MS, 416);
-  assert.equal(ENTRY_FULL_REST_MS, 750);
-  assert.equal(ENTRY_HALF_REST_MS, 375);
-  assert.equal(ENTRY_QUARTER_REST_MS, 188);
+  assert.equal(ENTRY_FULL_REST_MS, 350);
+  assert.equal(ENTRY_HALF_REST_MS, 175);
+  assert.equal(ENTRY_QUARTER_REST_MS, 90);
 
   assert.deepEqual(
     ENTRY_SEQUENCE.map(cue => [cue.atMs, cue.sound, cue.column]),
     [
       [0, 'entryPing', 4],
-      [1166, 'entryPing', 3],
-      [1957, 'entryPing', 3],
-      [3123, 'entryPing', 2],
-      [3727, 'entryPing', 2],
-      [4331, 'entryPing', 2],
+      [766, 'entryPing', 3],
+      [1357, 'entryPing', 3],
+      [2123, 'entryPing', 2],
+      [2629, 'entryPing', 2],
+      [3135, 'entryPing', 2],
     ],
   );
-  assert.equal(ENTRY_COMPLETE_MS, 4747);
+  assert.equal(ENTRY_COMPLETE_MS, 3551);
   const movements = ENTRY_SEQUENCE.filter((cue, i) =>
     i === 0 || cue.column !== ENTRY_SEQUENCE[i - 1].column);
   assert.deepEqual(movements.map(cue => [cue.atMs, cue.column]), [
-    [0, 4], [1166, 3], [3123, 2],
+    [0, 4], [766, 3], [2123, 2],
   ]);
   for (let i = 1; i < ENTRY_SEQUENCE.length; i++) {
     assert.ok(ENTRY_SEQUENCE[i].atMs >=
