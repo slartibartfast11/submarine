@@ -17,8 +17,10 @@ const RATE = 44100;
 const clamp = (value: number, low: number, high: number): number =>
   Math.max(low, Math.min(high, value));
 
-/** Render a preset into normalized mono PCM, with no browser or audio-device dependency. */
-export function renderSfx(p: SfxPreset, sampleRate = RATE): Float32Array {
+/** Render mono PCM. Normalisation is optional for intentionally soft effects. */
+export function renderSfx(
+  p: SfxPreset, sampleRate = RATE, options: { normalize?: boolean } = {},
+): Float32Array {
   const attack = Math.max(0, p.attack);
   const sustain = Math.max(0, p.sustain);
   const decay = Math.max(0, p.decay);
@@ -138,7 +140,8 @@ export function renderSfx(p: SfxPreset, sampleRate = RATE): Float32Array {
     power += output[i] * output[i];
   }
   const rms = Math.sqrt(power / output.length);
-  const level = peak > 0 && rms > 0 ? Math.min(0.89 / peak, 0.16 / rms) : 1;
+  const level = options.normalize === false ? 1 :
+    peak > 0 && rms > 0 ? Math.min(0.89 / peak, 0.16 / rms) : 1;
   const fadeLength = Math.min(output.length, Math.round(sampleRate * 0.004));
   for (let i = 0; i < output.length; i++) {
     const endFade = i >= output.length - fadeLength

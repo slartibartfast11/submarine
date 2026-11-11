@@ -15,7 +15,7 @@ import {
   planePoseForMotion,
   CLASSIC_CELL_WIDTH, CLASSIC_ACTOR_MOVE_TICKS, CLASSIC_SURFACE_MOVE_TICKS,
   CLASSIC_TORPEDO_MOVE_TICKS,
-  DYNAMIC_TORPEDO_SPEED, ENTRY_STEP_MS, torpedoUnlocked,
+  DYNAMIC_TORPEDO_SPEED, torpedoUnlocked,
   PLAYER_COLUMNS, PLAYER_DEPTHS, CLASSIC_ROW_Y,
   speedScale, stageAfter, stageGoal, stageTarget,
 } from '../src/config.ts';
@@ -70,7 +70,6 @@ test('difficulty grows but is capped', () => {
 test('Classic is a discrete shared clock which accelerates by cycle', () => {
   assert.ok(classicTickMs(1) >= 100 && classicTickMs(1) <= 175);
   assert.ok(classicTickMs(2) < classicTickMs(1));
-  assert.ok(ENTRY_STEP_MS >= 2000);
   assert.equal(CLASSIC_ACTOR_MOVE_TICKS, 4);
   assert.equal(CLASSIC_SURFACE_MOVE_TICKS, 8);
 });

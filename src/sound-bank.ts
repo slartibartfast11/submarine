@@ -74,7 +74,8 @@ class SoundBank {
     }
     let buffer = cache.get(name);
     if (!buffer) {
-      const pcm = renderSfx(SFX_PRESETS[name], context.sampleRate);
+      const pcm = renderSfx(SFX_PRESETS[name], context.sampleRate,
+        { normalize: name !== 'entryPing' });
       buffer = context.createBuffer(1, pcm.length, context.sampleRate);
       buffer.getChannelData(0).set(pcm);
       cache.set(name, buffer);
@@ -96,7 +97,7 @@ class SoundBank {
       aircraftBombFall: 0.075,
       planeApproachDraft: 0.085, planeDive: 0.085,
       extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
-      entryBaaaa: 0.11, entryBoo: 0.095, entryBooSecond: 0.095, entryFinal: 0.13,
+      entryPing: 0.04, // Unnormalised; deliberately softer than battle sounds.
     };
     volume.gain.value = gains[name] ?? 0.1;
     source.buffer = buffer;

@@ -548,7 +548,7 @@ export class BattleScene extends Phaser.Scene {
     this.player.setPosition(PLAYER_COLUMNS[4], PLAYER_DEPTHS[1]);
     this.gameOverHint.setVisible(false);
     this.drawHud();
-    // The short BOO is the movement itself, not a note after the movement.
+    // The first ping in each 1/2/3 group advances the submarine one grid column.
     for (const cue of ENTRY_SEQUENCE) {
       const trigger = (): void => {
         if (this.state !== 'entering' || generation !== this.entryGeneration) return;
