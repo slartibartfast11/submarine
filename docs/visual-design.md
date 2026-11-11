@@ -6,14 +6,15 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 
 - Display `public/cover.webp` uncropped at its original aspect ratio.
 - Centre **Classic** and **Modern** mode buttons beneath it; both are tappable.
-- Keep the title art separate from the monochrome gameplay canvas.
+- Keep the title art separate from the gameplay canvas.
 
 ## Display
 
 - Logical resolution: **960 × 540** (see `SCREEN` in `src/config.ts`), scaled to fit the browser viewport.
-- Background: pale sage (`#d5dac8`); active LCD shapes: dark olive (`#26372d`).
+- Both Classic and Modern use the same fixed, printed-colour backing: pale blue sky, muted turquoise water, a wavy horizon, and a subdued sandy seabed with rocks and seaweed. The scenery never animates.
+- Backdrop art comes from `src/backdrop-art.ts`, cached as a 2×-resolution canvas texture in `src/lcd-background.ts` behind the sprites.
+- The score panel remains pale sage (`#d5dac8`); active LCD shapes stay dark olive (`#26372d`) with transparent gaps.
 - Renderer: Phaser with pixel-art filtering disabled and antialiasing enabled.
-- Fixed backdrop: 2×-resolution canvas texture in `src/lcd-background.ts`, with faint curved clouds, a continuous waterline, depth guides and seabed contours.
 - HUD: seven-segment-style score digits with faint inactive segments, proportional text labels and three X indicators for lost submarines.
 
 ## Sprite assets
