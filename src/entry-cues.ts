@@ -7,9 +7,9 @@ const ping = SFX_PRESETS.entryPing;
 export const ENTRY_PING_DURATION_MS = Math.round(
   (ping.attack + ping.sustain + ping.decay) * 1000,
 );
-export const ENTRY_FULL_REST_MS = 750;
-export const ENTRY_HALF_REST_MS = 375;
-export const ENTRY_QUARTER_REST_MS = 188;
+export const ENTRY_FULL_REST_MS = 350;
+export const ENTRY_HALF_REST_MS = 175;
+export const ENTRY_QUARTER_REST_MS = 90;
 
 const firstPairAt = ENTRY_PING_DURATION_MS + ENTRY_FULL_REST_MS;
 const secondPairAt = firstPairAt + ENTRY_PING_DURATION_MS + ENTRY_HALF_REST_MS;
