@@ -47,6 +47,7 @@ export function demoSelection(seed: number): { mode: GameMode; stage: StageNumbe
 export class DemoController {
   private readonly random: () => number;
   private nextDecisionAt = 0;
+  private nextMissileAt = 0;
   private nextRetargetAt = 0;
   private aimColumn = 2;
 
@@ -56,11 +57,22 @@ export class DemoController {
   }
 
   decide(snapshot: DemoSnapshot, elapsedMs: number): DemoAction[] {
-    if (elapsedMs < this.nextDecisionAt) return [];
-    this.nextDecisionAt = elapsedMs + 340 + this.random() * 440;
     const actions: DemoAction[] = [];
     const playerX = PLAYER_COLUMNS[snapshot.column];
     const playerY = PLAYER_DEPTHS[snapshot.depth];
+
+    // This is a shoot-first arcade game. Launch whenever the existing weapon
+    // lockout permits it, even with no visible target or while dodging.
+    // A small independent key-press interval keeps the input human-sized.
+    if (snapshot.missileReady && elapsedMs >= this.nextMissileAt) {
+      actions.push('missile');
+      this.nextMissileAt = elapsedMs + 170 + this.random() * 220;
+    }
+
+    // Aiming and evasive movement are slower, separate decisions. Neither
+    // should block a ready missile from being launched.
+    if (elapsedMs < this.nextDecisionAt) return actions;
+    this.nextDecisionAt = elapsedMs + 270 + this.random() * 340;
 
     // Choose what seems interesting, and stick with it briefly.
     if (elapsedMs >= this.nextRetargetAt) {
@@ -81,17 +93,18 @@ export class DemoController {
       this.nextRetargetAt = elapsedMs + 900 + this.random() * 1800;
     }
 
-    // Notice danger late and sometimes react the wrong way (or not at all).
+    // It occasionally notices a nearby falling weapon, but doesn't spend
+    // the game fleeing distant bombs or interrupt firing to evade them.
     const danger = snapshot.shots.find(shot =>
       shot.kind !== 'enemyTorpedo' &&
-      Math.abs(shot.x - playerX) < 95 &&
-      shot.y > 190 && shot.y < playerY + 35);
-    if (danger && this.random() < 0.58) {
+      Math.abs(shot.x - playerX) < 80 &&
+      shot.y > playerY - 105 && shot.y < playerY + 35);
+    if (danger && this.random() < 0.17) {
       const dodge = snapshot.column === 0 ? 1 :
         snapshot.column === PLAYER_COLUMNS.length - 1 ? -1 :
           this.random() < 0.5 ? -1 : 1;
       actions.push(dodge < 0 ? 'left' : 'right');
-      // Reacting to a threat takes the whole decision.
+      // The movement decision is spent, but missile firing already happened.
       return actions;
     }
 
@@ -102,24 +115,16 @@ export class DemoController {
       if (snapshot.depth !== wantedDepth) actions.push(wantedDepth === 0 ? 'up' : 'down');
     }
 
-    // One grid step per decision. Occasionally hesitate instead.
-    if (snapshot.column !== this.aimColumn && this.random() < 0.8) {
+    // One grid step per decision. Still occasionally hesitate or aim badly.
+    if (snapshot.column !== this.aimColumn && this.random() < 0.88) {
       actions.push(snapshot.column < this.aimColumn ? 'right' : 'left');
-    }
-
-    // Fire at visible targets with rough alignment; also occasionally miss.
-    const aligned = snapshot.enemies.some(enemy =>
-      enemy.kind !== 'sub' && Math.abs(enemy.x - playerX) < 90);
-    if (snapshot.missileReady &&
-      (aligned ? this.random() < 0.66 : this.random() < 0.09)) {
-      actions.push('missile');
     }
 
     if (snapshot.stage === 3 && sub && snapshot.torpedoReady) {
       const sameDepth = Math.abs(sub.y - playerY) < 46;
       const facingTarget = (sub.x - playerX) * snapshot.facing > 45;
       if (sameDepth && (snapshot.mode === 'classic' || facingTarget) &&
-          this.random() < 0.6) actions.push('torpedo');
+          this.random() < 0.82) actions.push('torpedo');
     }
     return actions;
   }
