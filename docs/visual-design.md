@@ -33,7 +33,7 @@ For gameplay invariants and implementation ownership, see [the gameplay manifest
 - Surface escort destroyed: detached bow/gun, displaced bridge/mast and separated aft section; no generic burst.
 - Enemy submarine destroyed: central hull rupture with only two rounded endcaps and a broad scatter of smaller fragments.
 - Player submarine lost: split bow and stern sections, detached sail and several jagged chunks, preserving the original porthole and propeller cues.
-- Enemy debris holds for **230 ms** and fades over **140 ms**. Player submarine debris holds for **690 ms** and fades over **420 ms**; respawn or GAME OVER follows after the glyph clears. Only projectile-to-projectile interceptions use the original starburst.
+- Enemy debris holds for **230 ms** and fades over **140 ms**. On a non-final player loss, submarine debris holds for **690 ms** and fades over **420 ms** before the next entry. On the final loss the player debris remains on screen; GAME OVER freezes the other sprites, projectiles and effects. Only projectile-to-projectile interceptions use the original starburst.
 
 ## Motion and interaction
 
