@@ -52,7 +52,7 @@ class SoundBank {
 
   /** Motion cues from any aircraft replace the current aircraft voice. */
   aircraftDive(context: AudioContext | undefined, plane: object): void {
-    this.aircraft.play(plane, () => this.startPlayback(context, 'planeDiveDraft')?.control ?? null);
+    this.aircraft.play(plane, () => this.startPlayback(context, 'planeDive')?.control ?? null);
   }
 
   aircraftClimb(context: AudioContext | undefined, plane: object): void {
@@ -94,7 +94,7 @@ class SoundBank {
       missileLaunch: 0.11, missileLaunchAlternate: 0.11,
       missileIntercept: 0.13, enemySubAppear: 0.12, enemyWeaponDrop: 0.075,
       aircraftBombFall: 0.075,
-      planeApproachDraft: 0.085, planeDiveDraft: 0.085,
+      planeApproachDraft: 0.085, planeDive: 0.085,
       extraLife: 0.13, boatAppear: 0.09, gameOver: 0.16,
       entryBaaaa: 0.11, entryBoo: 0.095, entryBooSecond: 0.095, entryFinal: 0.13,
     };
