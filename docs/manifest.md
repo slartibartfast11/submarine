@@ -63,6 +63,7 @@ Implementation: [`src/classic-grid.ts`](../src/classic-grid.ts), `planePoseForMo
 - Enemy submarines appear at the screen edges, hold one of the two depth rows, and may transition smoothly to the other row on the applicable attack pattern. Only one enemy submarine is visible at once.
 - Player torpedoes travel in the **last facing direction**, even when an enemy submarine is visible.
 - Moving rectangular hitboxes are checked over their travelled paths (`sweptBoxesOverlap`), not by testing pixels or only the endpoints.
+- A rising missile gets extra horizontal reach against falling bombs and depth charges to account for the submarine's fixed firing positions. The projectiles must still overlap vertically at the time of interception.
 
 Implementation: `BattleScene.updateEnemies`, `BattleScene.updateShots` and `BattleScene.intersects` in [`src/scenes.ts`](../src/scenes.ts), and [`src/collision.ts`](../src/collision.ts).
 

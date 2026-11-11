@@ -32,3 +32,14 @@ export function sweptBoxesOverlap(aBefore: Box, aAfter: Box, bBefore: Box, bAfte
   }
   return enter <= exit && exit >= 0 && enter <= 1;
 }
+
+/** Modern drops can drift to either side of the player's fixed firing line. */
+export function modernMissileInterceptsDrop(
+  missileBefore: Box, missileAfter: Box, dropBefore: Box, dropAfter: Box,
+): boolean {
+  const sideAllowance = 12;
+  const width = missileBefore.width + 2 * sideAllowance;
+  return sweptBoxesOverlap(
+    { ...missileBefore, width }, { ...missileAfter, width }, dropBefore, dropAfter,
+  );
+}

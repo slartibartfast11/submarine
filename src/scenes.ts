@@ -13,7 +13,7 @@ import { installSprites, createEtchedImage } from './sprites';
 import {
   DEBRIS_HOLD_MS, DEBRIS_FADE_MS, PLAYER_DEBRIS_MULTIPLIER, PLAYER_DEATH_PAUSE_MS,
 } from './debris-timing';
-import { sweptBoxesOverlap, type Box } from './collision';
+import { modernMissileInterceptsDrop, sweptBoxesOverlap, type Box } from './collision';
 import { LcdHud } from './lcd';
 import { drawLcdBackdrop } from './lcd-background';
 import { droppedBombAppearance } from './drop-appearance';
@@ -1007,8 +1007,7 @@ export class BattleScene extends Phaser.Scene {
       shot.image.setPosition(shot.x, shot.y);
     }
 
-    // A missile intercepts a falling bomb/charge in its half-column or either
-    // neighbouring slot. Include a vertical row-crossing in the same clock tick.
+    // Resolve defensive missile hits before applying damage to the submarine.
     for (const shot of [...this.shots]) {
       if (shot.kind !== 'missile') continue;
       const assisted = this.mode === 'classic' && shot.emergencyIntercept !== null &&
@@ -1026,7 +1025,7 @@ export class BattleScene extends Phaser.Scene {
               shot.halfColumn, shot.halfRow - shot.stepRow, shot.halfRow,
               candidate.halfColumn, candidate.halfRow - candidate.stepRow, candidate.halfRow,
             )
-          : sweptBoxesOverlap(
+          : modernMissileInterceptsDrop(
             this.shotBox(shot, true), this.shotBox(shot),
             this.shotBox(candidate, true), this.shotBox(candidate),
           )),
