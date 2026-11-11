@@ -48,4 +48,4 @@ After stage 1-3, the stages repeat at a faster pace with higher targets.
 
 You start with **three submarines**. Each loss lights an X on the display. A replacement submarine enters and you retry the same stage while keeping your score.
 
-After the third loss, the game ends. Press **Esc** to open **GAME OVER** options. **Play Again** begins a fresh run in the same mode, with three lives and zero score; **Main Menu** returns to the title screen. Restart is never triggered by gameplay keys. Your high score is remembered while the page remains open.
+After the third loss, the game ends. Press **Esc** to open **GAME OVER** options. **Play Again** begins a fresh run in the same mode, with three lives and zero score; **Main Menu** returns to the title screen. Restart is never triggered by gameplay keys. Classic and Modern each remember their own high score in this browser. Scores are saved locally without a permission prompt. If browser storage is unavailable, records last until the page closes. Clearing site data removes saved scores.
